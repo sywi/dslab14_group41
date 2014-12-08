@@ -1,0 +1,15 @@
+*	CloudController	controller
+*	Client			alice
+*	Node			node1
+*	Node			node2
+
+controller:	!nodes
+>			verify(".*16503.*online.*0.*16502.*online.*0.*", T(test.util.Flag).REGEX)
+
+controller:	!users
+>			verify(".*alice.*offline.*bill.*offline.*", T(test.util.Flag).REGEX)
+
+controller:	!exit
+alice:		!exit
+node1:		!exit
+node2:		!exit

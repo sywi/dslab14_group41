@@ -1,0 +1,20 @@
+*	CloudController	controller
+*	Client			alice
+*	Node			node1
+
+alice:		!login alice 12345
+>			verify("success")
+
+alice:		!compute 1 + 2 + 3 + 4 + 5 + 6 + 7 + 8 + 9 + 10
+>			verify("55")
+
+alice:		!credits
+>			verify("50")
+
+alice:		!compute 1 + 5 + 9
+>			verify("not enough credits")
+
+
+controller:	!exit
+alice:		!exit
+node1:		!exit

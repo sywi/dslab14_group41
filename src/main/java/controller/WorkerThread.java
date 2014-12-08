@@ -1,0 +1,285 @@
+package controller;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
+import java.util.LinkedList;
+import java.util.StringTokenizer;
+
+public class WorkerThread implements Runnable {
+	
+	private Socket _socket;
+	private User _user;
+	private CloudController _ctrl;
+	
+	protected WorkerThread(Socket socket, CloudController ctrl) {
+		_socket = socket;
+		_ctrl = ctrl;
+	}
+
+	@Override
+	public void run() {
+		try {
+			BufferedReader reader = new BufferedReader(new InputStreamReader(_socket.getInputStream()));
+			PrintWriter writer = new PrintWriter(_socket.getOutputStream(), true);
+			executeRequest(reader, writer);
+		} catch (IOException e) {
+			_ctrl.getPrintStream().println("Could not establish conntection: " + e.getMessage());
+		}
+	}
+	
+	private void executeRequest(BufferedReader reader, PrintWriter writer) {
+		boolean alive = true;
+		String cmd;
+
+		while (alive) {
+			try {
+				cmd = reader.readLine();
+				if (cmd == null)
+					alive = false;
+
+				if (cmd != null) {
+					String[] splittedCmd = cmd.split(" ");
+
+					if (_user == null && !splittedCmd[0].equals("!login")) {
+						writer.println("Only for logged in users.");
+					} else {
+
+						switch (splittedCmd[0]) {
+						case "!login":
+							if (_user == null) {
+								_user = login(splittedCmd[1],splittedCmd[2]);
+								
+								if (_user != null) 
+									writer.println("Successfully logged in.");
+								else if (_user == null) 
+									writer.println("Wrong username or password.");
+								
+							} else {
+								if (_user.isActive())
+									writer.println("You are already logged in!");
+								else {
+									login(splittedCmd[1], splittedCmd[2]);
+									
+									if (_user != null) 
+										writer.println("Welcome back :)");
+									else
+										writer.println("Wrong username or password.");
+									
+								}
+							}
+							break;
+
+						case "!credits":
+							if (_user.isActive())
+								writer.println("You have "
+										+ _user.getCredits()
+										+ " credits left.");
+							else
+								writer.println("Only for logged in users.");
+
+							break;
+
+						case "!buy":
+							if (_user.isActive())
+								_user.setCredits(_user.getCredits()
+										+ Integer.parseInt(splittedCmd[1]));
+
+							break;
+
+						case "!list":
+							writer.println(list());
+							break;
+
+						case "!compute":
+							if (_user.isActive())
+								writer.println(compute(cmd));
+
+							break;
+
+						case "!logout":
+							_user.logout();
+							writer.println("Goodbye :)");
+							break;
+
+						case "!exit":
+							_user.logout();
+							writer.close();
+							reader.close();
+							_socket.close();
+							alive = false;
+							break;
+
+						default:
+							writer.println("No vailid command: "
+									+ splittedCmd[0]);
+						}
+					}
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	private String compute(String cmd) {
+
+		cmd = cmd.replace("!compute", "");
+		LinkedList<Integer> operands = new LinkedList<>();
+		LinkedList<Character> operators = new LinkedList<>();
+		
+		String s = "";
+		StringTokenizer token = new StringTokenizer(cmd);
+		while(token.hasMoreTokens()) {
+			s = token.nextToken();
+			if(isOperator(s)) 
+				operators.add(s.toCharArray()[0]);
+			else 
+				operands.add(Integer.parseInt(s));
+		}
+		
+		int i = 0;
+		Integer tempResult = null;
+		String result = null;
+		
+		if (_user.getCredits() >= operators.size() * 50) {
+			// iterating through all opertors
+			for (Character currOperator : operators) {
+
+				Node n = getNode(currOperator);
+
+				if (n != null) {
+					try {
+						Socket socket = new Socket(n.getAddress(), n.getTcpPort());
+						PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
+						BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+						char operator = currOperator;
+
+						int operand1;
+
+						if (tempResult != null)
+							operand1 = tempResult;
+						else
+							operand1 = operands.get(i++);
+
+						int operand2 = operands.get(i++);
+
+
+						writer.println(Integer.toString(operand1) + " " + operator + " " + Integer.toString(operand2));
+
+						String temp = "";
+						if ((temp = reader.readLine()) != null) {
+							if(isNumber(temp)) {
+								tempResult = Integer.parseInt(temp);
+								int k = n.getUsage() + (String.valueOf(tempResult).length() * 50);
+								n.setUsage(k);
+							} else if(isNegativeNumber(temp)) {
+								tempResult = Integer.parseInt(temp);
+								int k = n.getUsage() + (String.valueOf(tempResult).replace("-", "").length() * 50);
+								n.setUsage(k);
+							} else 
+								result = temp;
+						}
+
+						writer.close();
+						reader.close();
+						socket.close();
+						
+					} catch (IOException e) {
+						_ctrl.getPrintStream().println("Problems with user request " + e.getMessage());
+					}
+				} else {
+					return "No node for operation " + currOperator + " found.";
+				}
+				
+			}
+			if(result == null) 
+				result = Integer.toString(tempResult);
+
+			_user.setCredits(_user.getCredits()-(operators.size()*50));
+
+		} else {
+			result = "Operation could not be done. Not enough credits.";
+		}
+		return result;
+	}
+	
+	private boolean isOperator(String s) {
+		return (s.equals("*") || s.equals("+") || s.equals("-") || s.equals("/"));
+	}
+	
+	private boolean isNumber(String s) {
+		for(char c : s.toCharArray()) {
+			if(!(c >= '0' && c <= '9')) 
+				return false;
+		}
+		
+		return true;
+	}
+	
+	private boolean isNegativeNumber(String s) {
+		for(char c : s.toCharArray()) {
+			if(!(c >= '0' && c <= '9' || c == '-')) 
+				return false;
+		}
+		
+		return true;
+	}
+	
+
+	public String list() {
+		LinkedList<Character> availableOperators = new LinkedList<>();
+		
+		for (Integer key : _ctrl.getNodes().keySet()) {
+			char[] s = _ctrl.getNodes().get(key).getOperators().toCharArray();
+			for(int i = 0; i < s.length; i ++) {
+				if(!availableOperators.contains(s[i]))
+					availableOperators.add(s[i]);
+			}
+		}
+		
+		if(availableOperators.isEmpty())
+			return "No operators available.";
+		
+		return availableOperators.toString();
+	}
+	
+	//method used by WorkerThread
+	public User login(String username, String password) {
+		for (User u : _ctrl.getClients()) {
+			if (username.equals(u.getName())) {
+				if (u.login(password)) 
+					return u;
+			}
+		}
+		return null;
+	}
+	
+	//method used by WorkerThread
+	public Node getNode(Character c) {
+		LinkedList<Node> nodes = new LinkedList<>();
+
+		for (Integer key : _ctrl.getNodes().keySet()) {
+			if (_ctrl.getNodes().get(key).hasOperator(c)) {
+				if (_ctrl.getNodes().get(key).isAlive())
+					nodes.add(_ctrl.getNodes().get(key));
+			}
+		}
+
+		Node minUsage = null;
+
+		if (!nodes.isEmpty()) {
+			minUsage = nodes.get(0);
+
+			for (Node n : nodes) {
+				if (n.getUsage() < minUsage.getUsage())
+					minUsage = n;
+			}
+		}
+
+		return minUsage;
+	}
+}
