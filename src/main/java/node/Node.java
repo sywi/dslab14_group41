@@ -100,7 +100,7 @@ public class Node implements INodeCli, Runnable {
 			_handleConsoleInputThread = new ConsoleInputThread(this);
 			_executorService.execute(_handleConsoleInputThread);
 		} else {
-			userResponseStream.println("Clout Controller does not have enougth resources!");
+			userResponseStream.println("Cloud Controller does not have enougth resources!");
 			_executorService.shutdownNow();
 			_datagramSocket.close();
 			try {

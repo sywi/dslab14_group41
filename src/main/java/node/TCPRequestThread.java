@@ -27,7 +27,7 @@ public class TCPRequestThread implements Runnable {
 	private static final ThreadLocal<DateFormat> DATE_FORMAT = new ThreadLocal<DateFormat>() {
 		@Override
 		protected DateFormat initialValue() {
-			return new SimpleDateFormat("HH:mm:ss.SSS");
+			return new SimpleDateFormat("yyyyMMdd_HHmmss.SSS");
 		}
 	};
 	
