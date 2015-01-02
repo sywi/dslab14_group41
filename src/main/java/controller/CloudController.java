@@ -24,6 +24,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private int _udpPort;
 	private int _timeout;
 	private int _checkPeriod;
+	private int _rmax;
 	private LinkedList<User> _clients;
 	private ConcurrentHashMap<Integer, Node> _nodes;
 	private ExecutorService _executorService;
@@ -163,6 +164,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 			_udpPort = Integer.parseInt(prop.getProperty("udp.port"));
 			_timeout = Integer.parseInt(prop.getProperty("node.timeout"));
 			_checkPeriod = Integer.parseInt(prop.getProperty("node.checkPeriod"));
+			_rmax = Integer.parseInt(prop.getProperty("controller.rmax"));
 		} catch (IOException e) {
 			userResponseStream.println("Couldn't read cloud controller properties. " + e.getMessage());
 		}
@@ -224,4 +226,9 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	public LinkedList<User> getClients() {
 		return _clients;
 	}
+	
+	public int getRmax() {
+		return _rmax;
+	}
+	
 }

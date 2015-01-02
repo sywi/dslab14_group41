@@ -28,6 +28,9 @@ public class ConsoleInputThread implements Runnable {
 				case "!exit":
 					_ctrlNode.exit();
 					break;
+				case "!resources":
+					_ctrlNode.getPrintStream().println(_ctrlNode.resources());
+					break;
 
 				default:
 					_ctrlNode.getPrintStream().println("No vailid command");

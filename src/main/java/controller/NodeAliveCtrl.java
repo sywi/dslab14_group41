@@ -28,6 +28,8 @@ public class NodeAliveCtrl implements Runnable {
 
 				if (diff >= _ctrl.getTimeout()) {
 					_ctrl.getNodes().get(key).setIsAlive(false);
+				} else {
+					_ctrl.getNodes().get(key).setIsAlive(true);
 				}
 			}					
 		}
