@@ -6,7 +6,10 @@ import util.Config;
 
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.security.Key;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -16,7 +19,7 @@ import java.util.List;
  * used in Lab 2. Hence, you do not have to implement it for the first
  * submission.
  */
-public class AdminConsole implements IAdminConsole, Runnable {
+public class AdminConsole implements IAdminConsole, INotificationCallback, Runnable {
 
 	private String componentName;
 	private Config config;
@@ -32,13 +35,17 @@ public class AdminConsole implements IAdminConsole, Runnable {
 	 *            the input stream to read user input from
 	 * @param userResponseStream
 	 *            the output stream to write the console output to
+	 * @throws RemoteException 
+	 * @throws NotBoundException 
 	 */
 	public AdminConsole(String componentName, Config config,
-			InputStream userRequestStream, PrintStream userResponseStream) {
+			InputStream userRequestStream, PrintStream userResponseStream) throws RemoteException, NotBoundException {
 		this.componentName = componentName;
 		this.config = config;
 		this.userRequestStream = userRequestStream;
 		this.userResponseStream = userResponseStream;
+		Registry registry = LocateRegistry.getRegistry(config.getString("controller.host"), config.getInt("controller.rmi.port"));
+		IAdminConsole controller = (IAdminConsole) registry.lookup(config.getString("binding.name"));
 
 		// TODO
 	}
@@ -83,10 +90,18 @@ public class AdminConsole implements IAdminConsole, Runnable {
 	 * @param args
 	 *            the first argument is the name of the {@link AdminConsole}
 	 *            component
+	 * @throws RemoteException 
+	 * @throws NotBoundException 
 	 */
-	public static void main(String[] args) {
+	public static void main(String[] args) throws RemoteException, NotBoundException {
 		AdminConsole adminConsole = new AdminConsole(args[0], new Config(
 				"admin"), System.in, System.out);
 		// TODO: start the admin console
+	}
+
+	@Override
+	public void notify(String username, int credits) throws RemoteException {
+		// TODO Auto-generated method stub
+		
 	}
 }

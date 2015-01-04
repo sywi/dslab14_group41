@@ -4,16 +4,28 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
+import java.security.Key;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import model.ComputationRequestInfo;
+import admin.AdminConsole;
+import admin.INotificationCallback;
 import util.Config;
 
-public class CloudController implements ICloudControllerCli, Runnable {
+public class CloudController implements IAdminConsole, ICloudControllerCli, Runnable {
 
 	private String componentName;
 	private Config config;
@@ -32,6 +44,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private NodePackageWaiter _nodePackageWaiter;
 	private NodeAliveCtrl _nodeAliveCtrl;
 	private ConsoleInputCloudCtrl _consoleInput;
+	private HashMap _operators;
 
 	/**
 	 * @param componentName
@@ -42,9 +55,10 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	 *            the input stream to read user input from
 	 * @param userResponseStream
 	 *            the output stream to write the console output to
+	 * @throws RemoteException 
 	 */
 	public CloudController(String componentName, Config config,
-			InputStream userRequestStream, PrintStream userResponseStream) {
+			InputStream userRequestStream, PrintStream userResponseStream) throws RemoteException {
 		this.componentName = componentName;
 		this.config = config;
 		this.userRequestStream = userRequestStream;
@@ -52,6 +66,11 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		// read properties
 		readCtrlProperties();
 		readClientProperties();
+		LocateRegistry.createRegistry(config.getInt("controller.rmi.port"));
+		Registry registry = LocateRegistry.getRegistry();
+		registry.rebind(config.getString("binding.name"), this);
+		HashMap<String, Long> _operators = new HashMap<>();
+		
 	}
 
 	@Override
@@ -144,8 +163,9 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	 * @param args
 	 *            the first argument is the name of the {@link CloudController}
 	 *            component
+	 * @throws RemoteException 
 	 */
-	public static void main(String[] args) {
+	public static void main(String[] args) throws RemoteException {
 		CloudController cloudController = new CloudController(args[0],
 				new Config("controller"), System.in, System.out);
 		
@@ -229,6 +249,38 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	
 	public int getRmax() {
 		return _rmax;
+	}
+
+	@Override
+	public boolean subscribe(String username, int credits,
+			INotificationCallback callback) throws RemoteException {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public List<ComputationRequestInfo> getLogs() throws RemoteException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public LinkedHashMap<Character, Long> statistics() throws RemoteException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public Key getControllerPublicKey() throws RemoteException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void setUserPublicKey(String username, byte[] key)
+			throws RemoteException {
+		// TODO Auto-generated method stub
+		
 	}
 	
 }
