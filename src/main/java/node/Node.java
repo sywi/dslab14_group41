@@ -1,6 +1,7 @@
 package node;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,6 +41,7 @@ public class Node implements INodeCli, Runnable {
 	private ConsoleInputThread _handleConsoleInputThread;
 	private int _currentResourceLevel;
 	private int _possibleResourceLevel;
+	private File _hmacKeyFile;
 
 	private DatagramSocket _datagramSocket;
 
@@ -186,6 +188,8 @@ public class Node implements INodeCli, Runnable {
 					.parseInt(prop.getProperty("controller.udp.port"));
 			_operators = prop.getProperty("node.operators").split("(?!^)");
 			_rmin = Integer.parseInt(prop.getProperty("node.rmin"));
+			_hmacKeyFile = new File(prop.getProperty("hmac.key"));
+
 		} catch (IOException e) {
 			userResponseStream.println("Couldn't read node properties. "
 					+ e.getMessage());
@@ -399,5 +403,9 @@ public class Node implements INodeCli, Runnable {
 	
 	public int getPossibleResourceLevel() {
 		return _possibleResourceLevel;
+	}
+	
+	public File getHMACKeyFile() {
+		return _hmacKeyFile;
 	}
 }

@@ -5,8 +5,17 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 import java.util.LinkedList;
 import java.util.StringTokenizer;
+
+import javax.crypto.Mac;
+
+import org.bouncycastle.util.encoders.Base64;
+
+import util.Keys;
 
 public class WorkerThread implements Runnable {
 	
@@ -143,10 +152,12 @@ public class WorkerThread implements Runnable {
 		int i = 0;
 		Integer tempResult = null;
 		String result = null;
+		boolean hmacCheck = true;
 		
 		if (_user.getCredits() >= operators.size() * 50) {
 			// iterating through all opertors
 			for (Character currOperator : operators) {
+				if(hmacCheck) {
 
 				Node n = getNode(currOperator);
 
@@ -167,11 +178,24 @@ public class WorkerThread implements Runnable {
 
 						int operand2 = operands.get(i++);
 
+						// build message
+						String msg = "!compute " + Integer.toString(operand1) + " " + operator + " " + Integer.toString(operand2);
 
-						writer.println(Integer.toString(operand1) + " " + operator + " " + Integer.toString(operand2));
+						// add HMAC to message
+						msg = byteToString(encryptBase64(generateHMAC(msg))) + " " + msg;
+
+						writer.println(msg);
 
 						String temp = "";
-						if ((temp = reader.readLine()) != null) {
+						String hmac = "";
+						String warmingMsg = "";
+						String input = reader.readLine();
+						StringTokenizer tokenizer = new StringTokenizer(input);
+						
+						while(tokenizer.hasMoreTokens()) {
+							
+							temp = tokenizer.nextToken();
+							
 							if(isNumber(temp)) {
 								tempResult = Integer.parseInt(temp);
 								int k = n.getUsage() + (String.valueOf(tempResult).length() * 50);
@@ -180,10 +204,22 @@ public class WorkerThread implements Runnable {
 								tempResult = Integer.parseInt(temp);
 								int k = n.getUsage() + (String.valueOf(tempResult).replace("-", "").length() * 50);
 								n.setUsage(k);
-							} else 
-								result = temp;
+							} else if(temp.contains("!tempered")) {
+								hmacCheck = false;		
+							} else if(temp.contains("0!") || temp.contains("operator!")) {
+								warmingMsg = input.substring(input.indexOf(" "), input.length()).trim();
+								result = warmingMsg;
+							} else if(input.startsWith(temp)){
+								hmac = temp;
+							}
 						}
 
+						if(tempResult == null && hmacCheck) {
+							hmacCheck = checkHMAC(hmac, warmingMsg);
+						} else if(hmacCheck)
+							hmacCheck = checkHMAC(hmac, Integer.toString(tempResult));
+
+						
 						writer.close();
 						reader.close();
 						socket.close();
@@ -191,15 +227,22 @@ public class WorkerThread implements Runnable {
 					} catch (IOException e) {
 						_ctrl.getPrintStream().println("Problems with user request " + e.getMessage());
 					}
+				}
 				} else {
 					return "No node for operation " + currOperator + " found.";
 				}
 				
 			}
-			if(result == null) 
-				result = Integer.toString(tempResult);
+			
+			if(hmacCheck) {
+				if(result == null) 
+					result = Integer.toString(tempResult);
 
-			_user.setCredits(_user.getCredits()-(operators.size()*50));
+				_user.setCredits(_user.getCredits()-(operators.size()*50));
+			} else {
+				_ctrl.getPrintStream().println("Message from Node got tempered!");
+				result = "Message got tempered!";
+			}
 
 		} else {
 			result = "Operation could not be done. Not enough credits.";
@@ -281,5 +324,59 @@ public class WorkerThread implements Runnable {
 		}
 
 		return minUsage;
+	}
+	
+	private byte[] decryptBase64(byte[] msg) {
+		byte[] base64Msg = Base64.decode(msg);
+		
+		return base64Msg;
+	}
+	
+	private byte[] encryptBase64(byte[] msg) {
+		byte[] base64Msg = Base64.encode(msg);
+		
+		return base64Msg;
+	}
+	
+	private byte[] generateHMAC(String msg) {
+		Key secretKey;
+		byte[] encryptedMessage = null;
+		try {
+			secretKey = Keys.readSecretKey(_ctrl.getHmacKeyFile());
+
+			// create HMAC with secret key and message
+			Mac hMac = Mac.getInstance(secretKey.getAlgorithm());
+			hMac.init(secretKey);
+			hMac.update(msg.getBytes());
+			encryptedMessage = hMac.doFinal();
+
+		} catch (IOException | InvalidKeyException | NoSuchAlgorithmException e1) {
+			System.out.println("Problems during creating HMAC: " + e1.getMessage());
+		}
+		
+		return encryptedMessage;
+	}
+	
+	private String byteToString(byte[] byteA) {
+		StringBuilder builder = new StringBuilder();
+		
+		for(byte b : byteA)
+			builder.append((char) b);
+		
+		return builder.toString();
+	}
+	
+	private boolean checkHMAC(String hmac, String msg) {
+		byte[] generatedHmac = generateHMAC(msg);
+
+		// decode the filtered HMAC 
+		byte[] base64Message = Base64.decode(hmac);
+
+		String decodedHMAC = byteToString(base64Message);
+				
+		if(byteToString(generatedHmac).equals(decodedHMAC))
+			return true;
+
+		return false;
 	}
 }

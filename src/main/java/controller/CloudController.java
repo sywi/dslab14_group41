@@ -1,5 +1,6 @@
 package controller;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,6 +33,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private NodePackageWaiter _nodePackageWaiter;
 	private NodeAliveCtrl _nodeAliveCtrl;
 	private ConsoleInputCloudCtrl _consoleInput;
+	private File _hmacKeyFile;
 
 	/**
 	 * @param componentName
@@ -165,6 +167,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 			_timeout = Integer.parseInt(prop.getProperty("node.timeout"));
 			_checkPeriod = Integer.parseInt(prop.getProperty("node.checkPeriod"));
 			_rmax = Integer.parseInt(prop.getProperty("controller.rmax"));
+			_hmacKeyFile = new File(prop.getProperty("hmac.key"));
 		} catch (IOException e) {
 			userResponseStream.println("Couldn't read cloud controller properties. " + e.getMessage());
 		}
@@ -229,6 +232,10 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	
 	public int getRmax() {
 		return _rmax;
+	}
+	
+	public File getHmacKeyFile() {
+		return _hmacKeyFile;
 	}
 	
 }

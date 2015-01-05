@@ -3,17 +3,27 @@ package node;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedList;
 import java.util.StringTokenizer;
+
+import javax.crypto.Mac;
+
+import org.bouncycastle.util.encoders.Base64;
+
+import util.Keys;
 
 public class TCPRequestThread implements Runnable {
 	private Socket _socket;
@@ -118,29 +128,56 @@ public class TCPRequestThread implements Runnable {
 	private String handleClientRequest(String input) {
 		LinkedList<Integer> operands = new LinkedList<>();
 		LinkedList<Character> operators = new LinkedList<>();
-		
+				
+		//filter for operators and operands (they are seperated by a space)
 		String in = "";
 		StringTokenizer token = new StringTokenizer(input);
-		
+				
 		while(token.hasMoreTokens()) {	
 				
 			in = token.nextToken();
 			
-			if(isOperator(in)) {
+			if(isOperator(in)) 
 				operators.add(in.toCharArray()[0]);
-			} else {
+			else if(isNumber(in.toCharArray()) || isNegativeNumber(in))
 				operands.add(Integer.parseInt(in));
-			}
+		}
+		
+		// filter for the HMAC part of the message (message structure: <hmac> !compute <term>)
+		CharSequence hmac = input.subSequence(0, input.indexOf(" !compute"));
+//		System.out.println("HMAC : " + hmac);
+		// generate HMAC with the rest of the message (!compute <term>)
+		byte[] generatedHmac = generateHMAC(input.substring(input.indexOf("!compute")));
+
+		// decode the filtered HMAC 
+		byte[] base64Message = Base64.decode(hmac.toString());
+
+		String decodedHMAC = byteToString(base64Message);
+		
+		String result = null;
+		
+		if(byteToString(generatedHmac).equals(decodedHMAC)) {
+			
+			System.out.println(hasOperator(operators.getFirst()));
+			System.out.println(operands.size());
+			
+			
+			// operator and enough operands have arrived
+			if(hasOperator(operators.getFirst()) && operands.size() >= 2) 
+				result = calculate(operators.getFirst(), operands.get(0), operands.get(1));				
+							
+			writeLogFile(input.substring(input.indexOf(" !compute ") + 10), result);
+			
+			// add HMAC to the result string
+			result = byteToString(encryptBase64(generateHMAC(result))) + " " + result;
+			System.out.println("SEND: " + result);
+			
+		} else {
+			result = generatedHmac + " !tempered " + input.substring(input.indexOf(" !compute ") + 10);
+			userResponseStream.println("Message from CloudController got tempered!");
+//			System.out.println("tempered msg: " + result);
 		}
 	
-		String result = null;
-						
-		// operator and enough operands have arrived
-		if(hasOperator(operators.getFirst()) && operands.size() >= 2) 
-			result = calculate(operators.getFirst(), operands.get(0), operands.get(1));				
-						
-		writeLogFile(input, result);
-		
 		return result;
 	}
 
@@ -215,6 +252,55 @@ public class TCPRequestThread implements Runnable {
 			userResponseStream.println("Problems while writing to log file: " + e.getMessage());
 		}
 
+	}
+	
+	private byte[] encryptBase64(byte[] msg) {
+		byte[] base64Msg = Base64.encode(msg);
+		
+		return base64Msg;
+	}
+	
+	private byte[] decryptBase64(String msg) {
+		byte[] base64Msg = Base64.decode(msg);
+		
+		return base64Msg;
+	}
+	
+	private byte[] generateHMAC(String msg) {
+		Key secretKey;
+		byte[] encryptedMessage = null;
+		try {
+			secretKey = Keys.readSecretKey(_ctrl.getHMACKeyFile());
+
+			// create HMAC with secret key and message
+			Mac hMac = Mac.getInstance(secretKey.getAlgorithm());
+			hMac.init(secretKey);
+			hMac.update(msg.getBytes());
+			encryptedMessage = hMac.doFinal();
+
+		} catch (IOException | InvalidKeyException | NoSuchAlgorithmException e1) {
+			System.out.println("Problems during creating HMAC: " + e1.getMessage());
+		}
+		
+		return encryptedMessage;
+	}
+	
+	private String byteToString(byte[] byteA) {
+		StringBuilder builder = new StringBuilder();
+		
+		for(byte b : byteA)
+			builder.append((char) b);
+		
+		return builder.toString();
+	}
+	
+	private boolean isNegativeNumber(String s) {
+		for(char c : s.toCharArray()) {
+			if(!(c >= '0' && c <= '9' || c == '-')) 
+				return false;
+		}
+		
+		return true;
 	}
 }
 
