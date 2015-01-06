@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.StringTokenizer;
 
@@ -13,10 +14,12 @@ public class WorkerThread implements Runnable {
 	private Socket _socket;
 	private User _user;
 	private CloudController _ctrl;
+	private HashMap<Character, Integer> _operators;
 	
 	protected WorkerThread(Socket socket, CloudController ctrl) {
 		_socket = socket;
 		_ctrl = ctrl;
+		HashMap<Character, Integer> _operators = new HashMap<>();
 	}
 
 	@Override
@@ -157,6 +160,14 @@ public class WorkerThread implements Runnable {
 						BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
 						char operator = currOperator;
+						
+						if(_operators.containsKey(operator)){
+							int value = (int) _operators.get(operator);
+							value++;
+							_operators.put(operator, value);
+						} else {
+							_operators.put(operator, 1);
+						}
 
 						int operand1;
 
@@ -281,5 +292,9 @@ public class WorkerThread implements Runnable {
 		}
 
 		return minUsage;
+	}
+	
+	public HashMap getOperators(){
+		return _operators;
 	}
 }

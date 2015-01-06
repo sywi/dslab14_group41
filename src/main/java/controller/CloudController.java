@@ -16,6 +16,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -25,7 +26,8 @@ import admin.AdminConsole;
 import admin.INotificationCallback;
 import util.Config;
 
-public class CloudController implements IAdminConsole, ICloudControllerCli, Runnable {
+public class CloudController implements IAdminConsole, ICloudControllerCli,
+		Runnable {
 
 	private String componentName;
 	private Config config;
@@ -44,7 +46,6 @@ public class CloudController implements IAdminConsole, ICloudControllerCli, Runn
 	private NodePackageWaiter _nodePackageWaiter;
 	private NodeAliveCtrl _nodeAliveCtrl;
 	private ConsoleInputCloudCtrl _consoleInput;
-	private HashMap _operators;
 
 	/**
 	 * @param componentName
@@ -55,10 +56,11 @@ public class CloudController implements IAdminConsole, ICloudControllerCli, Runn
 	 *            the input stream to read user input from
 	 * @param userResponseStream
 	 *            the output stream to write the console output to
-	 * @throws RemoteException 
+	 * @throws RemoteException
 	 */
 	public CloudController(String componentName, Config config,
-			InputStream userRequestStream, PrintStream userResponseStream) throws RemoteException {
+			InputStream userRequestStream, PrintStream userResponseStream)
+			throws RemoteException {
 		this.componentName = componentName;
 		this.config = config;
 		this.userRequestStream = userRequestStream;
@@ -69,31 +71,28 @@ public class CloudController implements IAdminConsole, ICloudControllerCli, Runn
 		LocateRegistry.createRegistry(config.getInt("controller.rmi.port"));
 		Registry registry = LocateRegistry.getRegistry();
 		registry.rebind(config.getString("binding.name"), this);
-		HashMap<String, Long> _operators = new HashMap<>();
-		
+
 	}
 
 	@Override
 	public void run() {
-		
+
 		// initiating new Thread Pool
 		_executorService = Executors.newCachedThreadPool();
-		
-		
+
 		// handling client requests
 		_clientRequestWaiter = new ClientRequestWaiterCloudCtrl(_tcpPort, this);
 		_executorService.execute(_clientRequestWaiter);
-		
-		
+
 		// waiting for packages from nodes
 		_nodes = new ConcurrentHashMap<>();
 		_nodePackageWaiter = new NodePackageWaiter(this, _udpPort);
 		_executorService.execute(_nodePackageWaiter);
-				
+
 		// check if every node is alive
 		_nodeAliveCtrl = new NodeAliveCtrl(this);
 		_executorService.execute(_nodeAliveCtrl);
-		
+
 		// handle console input
 		_consoleInput = new ConsoleInputCloudCtrl(this);
 		_executorService.execute(_consoleInput);
@@ -105,15 +104,16 @@ public class CloudController implements IAdminConsole, ICloudControllerCli, Runn
 		StringBuilder builder = new StringBuilder();
 		int i = 1;
 		Node currNode;
-		
+
 		for (Integer key : _nodes.keySet()) {
 			currNode = _nodes.get(key);
-			builder.append(i++ + ". IP: " + currNode.getAddress() + " Port: " + currNode.getTcpPort());
-			if(currNode.isAlive())
+			builder.append(i++ + ". IP: " + currNode.getAddress() + " Port: "
+					+ currNode.getTcpPort());
+			if (currNode.isAlive())
 				builder.append(" online");
 			else
 				builder.append(" offline");
-			
+
 			builder.append(" Usage: " + currNode.getUsage() + "\n");
 		}
 		return builder.toString();
@@ -122,18 +122,18 @@ public class CloudController implements IAdminConsole, ICloudControllerCli, Runn
 	@Override
 	public String users() throws IOException {
 		StringBuilder builder = new StringBuilder();
-		
-		for(User u : _clients) {
+
+		for (User u : _clients) {
 			builder.append(u.getName() + " ");
-			
-			if(u.isActive())
+
+			if (u.isActive())
 				builder.append("online");
 			else
 				builder.append("offline");
-			
+
 			builder.append(" Credits: " + u.getCredits() + "\n");
 		}
-		
+
 		return builder.toString();
 	}
 
@@ -143,18 +143,17 @@ public class CloudController implements IAdminConsole, ICloudControllerCli, Runn
 		_nodePackageWaiter.terminate();
 		_nodeAliveCtrl.terminate();
 		_consoleInput.terminate();
-		
 
 		try {
 			Thread.sleep(_checkPeriod);
 		} catch (InterruptedException e) {
-			userResponseStream.println("Problems during shutdown. " + e.getMessage());
+			userResponseStream.println("Problems during shutdown. "
+					+ e.getMessage());
 		}
-				
+
 		userRequestStream.close();
 		userResponseStream.close();
 		_executorService.shutdownNow();
-
 
 		return null;
 	}
@@ -163,12 +162,12 @@ public class CloudController implements IAdminConsole, ICloudControllerCli, Runn
 	 * @param args
 	 *            the first argument is the name of the {@link CloudController}
 	 *            component
-	 * @throws RemoteException 
+	 * @throws RemoteException
 	 */
 	public static void main(String[] args) throws RemoteException {
 		CloudController cloudController = new CloudController(args[0],
 				new Config("controller"), System.in, System.out);
-		
+
 		ExecutorService executorService = Executors.newSingleThreadExecutor();
 		executorService.execute(cloudController);
 		executorService.shutdown();
@@ -177,16 +176,20 @@ public class CloudController implements IAdminConsole, ICloudControllerCli, Runn
 	private void readCtrlProperties() {
 		Properties prop = new Properties();
 		try {
-			InputStream input = new FileInputStream("src/main/resources/controller.properties");
+			InputStream input = new FileInputStream(
+					"src/main/resources/controller.properties");
 			prop.load(input);
 
 			_tcpPort = Integer.parseInt(prop.getProperty("tcp.port"));
 			_udpPort = Integer.parseInt(prop.getProperty("udp.port"));
 			_timeout = Integer.parseInt(prop.getProperty("node.timeout"));
-			_checkPeriod = Integer.parseInt(prop.getProperty("node.checkPeriod"));
+			_checkPeriod = Integer.parseInt(prop
+					.getProperty("node.checkPeriod"));
 			_rmax = Integer.parseInt(prop.getProperty("controller.rmax"));
 		} catch (IOException e) {
-			userResponseStream.println("Couldn't read cloud controller properties. " + e.getMessage());
+			userResponseStream
+					.println("Couldn't read cloud controller properties. "
+							+ e.getMessage());
 		}
 	}
 
@@ -196,7 +199,8 @@ public class CloudController implements IAdminConsole, ICloudControllerCli, Runn
 		_clients = new LinkedList<>();
 
 		try {
-			InputStream input = new FileInputStream("src/main/resources/user.properties");
+			InputStream input = new FileInputStream(
+					"src/main/resources/user.properties");
 			prop.load(input);
 
 			String name = "";
@@ -213,20 +217,21 @@ public class CloudController implements IAdminConsole, ICloudControllerCli, Runn
 				if (key.contains(".password")) {
 					name = key.replaceAll(".password", "");
 					password = prop.getProperty(name + ".password");
-					credits = Integer.parseInt(prop.getProperty(name + ".credits"));
+					credits = Integer.parseInt(prop.getProperty(name
+							+ ".credits"));
 					_clients.add(new User(name, password, credits));
 				}
 			}
 		} catch (IOException e) {
-			userResponseStream.println("Couldn't read client properties. " + e.getMessage());
+			userResponseStream.println("Couldn't read client properties. "
+					+ e.getMessage());
 		}
 	}
 
-	
 	public PrintStream getPrintStream() {
 		return userResponseStream;
 	}
-	
+
 	public InputStream getInputStream() {
 		return userRequestStream;
 	}
@@ -234,19 +239,19 @@ public class CloudController implements IAdminConsole, ICloudControllerCli, Runn
 	public ConcurrentHashMap<Integer, Node> getNodes() {
 		return _nodes;
 	}
-	
+
 	public int getTimeout() {
 		return _timeout;
 	}
-	
+
 	public int getCheckperiod() {
 		return _checkPeriod;
 	}
-	
+
 	public LinkedList<User> getClients() {
 		return _clients;
 	}
-	
+
 	public int getRmax() {
 		return _rmax;
 	}
@@ -266,8 +271,37 @@ public class CloudController implements IAdminConsole, ICloudControllerCli, Runn
 
 	@Override
 	public LinkedHashMap<Character, Long> statistics() throws RemoteException {
-		// TODO Auto-generated method stub
-		return null;
+		LinkedHashMap<Character, Long> zruck = new LinkedHashMap<Character, Long>();
+		HashMap<Character, Integer> temp = _clientRequestWaiter.getOperators();
+		while (!temp.isEmpty()) {
+			Set tempKeys = temp.keySet();;
+			Character actKey;
+			int maxValue = 0;
+			if(tempKeys.contains('+')){
+				actKey='+';
+				maxValue=temp.get('+');
+			}
+			if(tempKeys.contains('-')){
+				if(temp.get('-')<maxValue){
+					actKey='-';
+					maxValue=temp.get('-');
+				}
+			}
+			if(tempKeys.contains('*')){
+				if(temp.get('*')<maxValue){
+					actKey='*';
+					maxValue=temp.get('*');
+				}
+			}
+			if(tempKeys.contains('/')){
+				if(temp.get('/')<maxValue){
+					actKey='/';
+					maxValue=temp.get('/');
+				}
+			}
+			zruck.put(actKey, temp.get(actKey));
+		}
+		return zruck;
 	}
 
 	@Override
@@ -280,7 +314,7 @@ public class CloudController implements IAdminConsole, ICloudControllerCli, Runn
 	public void setUserPublicKey(String username, byte[] key)
 			throws RemoteException {
 		// TODO Auto-generated method stub
-		
+
 	}
-	
+
 }

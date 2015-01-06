@@ -25,6 +25,7 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 	private Config config;
 	private InputStream userRequestStream;
 	private PrintStream userResponseStream;
+	private IAdminConsole controller;
 
 	/**
 	 * @param componentName
@@ -45,7 +46,7 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 		this.userRequestStream = userRequestStream;
 		this.userResponseStream = userResponseStream;
 		Registry registry = LocateRegistry.getRegistry(config.getString("controller.host"), config.getInt("controller.rmi.port"));
-		IAdminConsole controller = (IAdminConsole) registry.lookup(config.getString("binding.name"));
+		controller = (IAdminConsole) registry.lookup(config.getString("binding.name"));
 
 		// TODO
 	}
@@ -58,26 +59,25 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 	@Override
 	public boolean subscribe(String username, int credits,
 			INotificationCallback callback) throws RemoteException {
-		// TODO Auto-generated method stub
-		return false;
+		return controller.subscribe(username, credits, callback);
+		
 	}
 
 	@Override
 	public List<ComputationRequestInfo> getLogs() throws RemoteException {
-		// TODO Auto-generated method stub
-		return null;
+		return controller.getLogs();
+		
 	}
 
 	@Override
 	public LinkedHashMap<Character, Long> statistics() throws RemoteException {
-		// TODO Auto-generated method stub
-		return null;
+		return controller.statistics();
 	}
 
 	@Override
 	public Key getControllerPublicKey() throws RemoteException {
 		// TODO Auto-generated method stub
-		return null;
+		return controller.getControllerPublicKey();
 	}
 
 	@Override
