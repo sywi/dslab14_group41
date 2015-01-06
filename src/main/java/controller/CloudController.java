@@ -259,8 +259,8 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 	@Override
 	public boolean subscribe(String username, int credits,
 			INotificationCallback callback) throws RemoteException {
-		// TODO Auto-generated method stub
-		return false;
+		_clientRequestWaiter.setUserWatchList(username, credits);
+		return true;
 	}
 
 	@Override

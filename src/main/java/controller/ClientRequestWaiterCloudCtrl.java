@@ -61,6 +61,10 @@ public class ClientRequestWaiterCloudCtrl implements Runnable {
 		return thread.getOperators();
 	}
 	
+	public void setUserWatchList(String client, int threshold){
+		thread.setUserWatchList(client, threshold);
+	}
+	
 	public void terminate() throws IOException {
 		_clientPool.shutdown();
 		_isAlive = false;

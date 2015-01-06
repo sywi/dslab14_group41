@@ -15,6 +15,7 @@ public class WorkerThread implements Runnable {
 	private User _user;
 	private CloudController _ctrl;
 	private HashMap<Character, Integer> _operators;
+	private HashMap<String, Integer> _userWatchList;
 	
 	protected WorkerThread(Socket socket, CloudController ctrl) {
 		_socket = socket;
@@ -211,6 +212,12 @@ public class WorkerThread implements Runnable {
 				result = Integer.toString(tempResult);
 
 			_user.setCredits(_user.getCredits()-(operators.size()*50));
+			// TODO rückgabe fnalisieren
+			if(_userWatchList.containsKey(_user.getName())){
+				if(_userWatchList.get(_user.getName())<_user.getCredits()){
+					
+				}
+			}
 
 		} else {
 			result = "Operation could not be done. Not enough credits.";
@@ -296,5 +303,8 @@ public class WorkerThread implements Runnable {
 	
 	public HashMap getOperators(){
 		return _operators;
+	}
+	public void setUserWatchList(String client, int threshold){
+		_userWatchList.put(client, threshold);
 	}
 }
