@@ -1,5 +1,6 @@
 package controller;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -46,6 +47,7 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 	private NodePackageWaiter _nodePackageWaiter;
 	private NodeAliveCtrl _nodeAliveCtrl;
 	private ConsoleInputCloudCtrl _consoleInput;
+	private File _hmacKeyFile;
 
 	/**
 	 * @param componentName
@@ -176,20 +178,17 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 	private void readCtrlProperties() {
 		Properties prop = new Properties();
 		try {
-			InputStream input = new FileInputStream(
-					"src/main/resources/controller.properties");
+			InputStream input = new FileInputStream("src/main/resources/controller.properties");
 			prop.load(input);
 
 			_tcpPort = Integer.parseInt(prop.getProperty("tcp.port"));
 			_udpPort = Integer.parseInt(prop.getProperty("udp.port"));
 			_timeout = Integer.parseInt(prop.getProperty("node.timeout"));
-			_checkPeriod = Integer.parseInt(prop
-					.getProperty("node.checkPeriod"));
+			_checkPeriod = Integer.parseInt(prop.getProperty("node.checkPeriod"));
 			_rmax = Integer.parseInt(prop.getProperty("controller.rmax"));
+			_hmacKeyFile = new File(prop.getProperty("hmac.key"));
 		} catch (IOException e) {
-			userResponseStream
-					.println("Couldn't read cloud controller properties. "
-							+ e.getMessage());
+			userResponseStream.println("Couldn't read cloud controller properties. " + e.getMessage());
 		}
 	}
 
@@ -217,14 +216,12 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 				if (key.contains(".password")) {
 					name = key.replaceAll(".password", "");
 					password = prop.getProperty(name + ".password");
-					credits = Integer.parseInt(prop.getProperty(name
-							+ ".credits"));
+					credits = Integer.parseInt(prop.getProperty(name + ".credits"));
 					_clients.add(new User(name, password, credits));
 				}
 			}
 		} catch (IOException e) {
-			userResponseStream.println("Couldn't read client properties. "
-					+ e.getMessage());
+			userResponseStream.println("Couldn't read client properties. " + e.getMessage());
 		}
 	}
 
@@ -317,4 +314,8 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 
 	}
 
+	public File getHmacKeyFile() {
+		return _hmacKeyFile;
+	}
+	
 }

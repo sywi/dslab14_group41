@@ -6,8 +6,17 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.HashMap;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 import java.util.LinkedList;
 import java.util.StringTokenizer;
+
+import javax.crypto.Mac;
+
+import org.bouncycastle.util.encoders.Base64;
+
+import util.Keys;
 
 public class WorkerThread implements Runnable {
 	
@@ -147,10 +156,12 @@ public class WorkerThread implements Runnable {
 		int i = 0;
 		Integer tempResult = null;
 		String result = null;
+		boolean hmacCheck = true;
 		
 		if (_user.getCredits() >= operators.size() * 50) {
 			// iterating through all opertors
 			for (Character currOperator : operators) {
+				if(hmacCheck) {
 
 				Node n = getNode(currOperator);
 
@@ -179,11 +190,24 @@ public class WorkerThread implements Runnable {
 
 						int operand2 = operands.get(i++);
 
+						// build message
+						String msg = "!compute " + Integer.toString(operand1) + " " + operator + " " + Integer.toString(operand2);
 
-						writer.println(Integer.toString(operand1) + " " + operator + " " + Integer.toString(operand2));
+						// add HMAC to message
+						msg = byteToString(encryptBase64(generateHMAC(msg))) + " " + msg;
+
+						writer.println(msg);
 
 						String temp = "";
-						if ((temp = reader.readLine()) != null) {
+						String hmac = "";
+						String warmingMsg = "";
+						String input = reader.readLine();
+						StringTokenizer tokenizer = new StringTokenizer(input);
+						
+						while(tokenizer.hasMoreTokens()) {
+							
+							temp = tokenizer.nextToken();
+							
 							if(isNumber(temp)) {
 								tempResult = Integer.parseInt(temp);
 								int k = n.getUsage() + (String.valueOf(tempResult).length() * 50);
@@ -192,10 +216,22 @@ public class WorkerThread implements Runnable {
 								tempResult = Integer.parseInt(temp);
 								int k = n.getUsage() + (String.valueOf(tempResult).replace("-", "").length() * 50);
 								n.setUsage(k);
-							} else 
-								result = temp;
+							} else if(temp.contains("!tempered")) {
+								hmacCheck = false;		
+							} else if(temp.contains("0!") || temp.contains("operator!")) {
+								warmingMsg = input.substring(input.indexOf(" "), input.length()).trim();
+								result = warmingMsg;
+							} else if(input.startsWith(temp)){
+								hmac = temp;
+							}
 						}
 
+						if(tempResult == null && hmacCheck) {
+							hmacCheck = checkHMAC(hmac, warmingMsg);
+						} else if(hmacCheck)
+							hmacCheck = checkHMAC(hmac, Integer.toString(tempResult));
+
+						
 						writer.close();
 						reader.close();
 						socket.close();
@@ -203,15 +239,22 @@ public class WorkerThread implements Runnable {
 					} catch (IOException e) {
 						_ctrl.getPrintStream().println("Problems with user request " + e.getMessage());
 					}
+				}
 				} else {
 					return "No node for operation " + currOperator + " found.";
 				}
 				
 			}
-			if(result == null) 
-				result = Integer.toString(tempResult);
+			
+			if(hmacCheck) {
+				if(result == null) 
+					result = Integer.toString(tempResult);
 
-			_user.setCredits(_user.getCredits()-(operators.size()*50));
+				_user.setCredits(_user.getCredits()-(operators.size()*50));
+			} else {
+				_ctrl.getPrintStream().println("Message from Node got tempered!");
+				result = "Message got tempered!";
+			}
 			// TODO rückgabe fnalisieren
 			if(_userWatchList.containsKey(_user.getName())){
 				if(_userWatchList.get(_user.getName())<_user.getCredits()){
