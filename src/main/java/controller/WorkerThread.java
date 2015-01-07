@@ -326,12 +326,6 @@ public class WorkerThread implements Runnable {
 		return minUsage;
 	}
 	
-	private byte[] decryptBase64(byte[] msg) {
-		byte[] base64Msg = Base64.decode(msg);
-		
-		return base64Msg;
-	}
-	
 	private byte[] encryptBase64(byte[] msg) {
 		byte[] base64Msg = Base64.encode(msg);
 		
@@ -340,7 +334,7 @@ public class WorkerThread implements Runnable {
 	
 	private byte[] generateHMAC(String msg) {
 		Key secretKey;
-		byte[] encryptedMessage = null;
+		byte[] hash = null;
 		try {
 			secretKey = Keys.readSecretKey(_ctrl.getHmacKeyFile());
 
@@ -348,13 +342,13 @@ public class WorkerThread implements Runnable {
 			Mac hMac = Mac.getInstance(secretKey.getAlgorithm());
 			hMac.init(secretKey);
 			hMac.update(msg.getBytes());
-			encryptedMessage = hMac.doFinal();
+			hash = hMac.doFinal();
 
 		} catch (IOException | InvalidKeyException | NoSuchAlgorithmException e1) {
 			System.out.println("Problems during creating HMAC: " + e1.getMessage());
 		}
 		
-		return encryptedMessage;
+		return hash;
 	}
 	
 	private String byteToString(byte[] byteA) {

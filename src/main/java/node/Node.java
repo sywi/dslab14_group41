@@ -42,6 +42,7 @@ public class Node implements INodeCli, Runnable {
 	private int _currentResourceLevel;
 	private int _possibleResourceLevel;
 	private File _hmacKeyFile;
+	private boolean _wasOnceAlive = false;
 
 	private DatagramSocket _datagramSocket;
 
@@ -82,8 +83,13 @@ public class Node implements INodeCli, Runnable {
 			e1.printStackTrace();
 		}
 
+		// handle console input
+		_handleConsoleInputThread = new ConsoleInputThread(this);
+		_executorService.execute(_handleConsoleInputThread);
+		
 		sendHelloMsg(_datagramSocket);
 		if (ctrlHasRecources(waitForResponse())) {
+			_wasOnceAlive = true;
 
 			// wait for incoming resource asking nodes (TCP connection)
 			// _nodeRequestWaiter = new NodeRequestWaiter(_socket);
@@ -97,22 +103,18 @@ public class Node implements INodeCli, Runnable {
 			// handle client request
 			_clientRequestWaiter = new TCPRequestWaiter(_socket, this);
 			_executorService.execute(_clientRequestWaiter);
-
-			// handle console input
-			_handleConsoleInputThread = new ConsoleInputThread(this);
-			_executorService.execute(_handleConsoleInputThread);
 		} else {
 			userResponseStream.println("Cloud Controller does not have enougth resources!");
-			_executorService.shutdownNow();
-			_datagramSocket.close();
-			try {
-				_socket.close();
-				userRequestStream.close();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			userResponseStream.close();
+//			_executorService.shutdownNow();
+//			_datagramSocket.close();
+//			try {
+//				_socket.close();
+//				userRequestStream.close();
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//			userResponseStream.close();
 		}
 	}
 
@@ -120,8 +122,11 @@ public class Node implements INodeCli, Runnable {
 	@Override
 	public String exit() throws IOException {
 		_handleConsoleInputThread.terminate();
+		
+		if(_wasOnceAlive) {
 		_isAliveThread.terminate();
 		_clientRequestWaiter.terminate();
+		}
 
 		try {
 			Thread.sleep(_alive * 2);

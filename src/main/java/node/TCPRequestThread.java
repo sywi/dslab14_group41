@@ -3,7 +3,6 @@ package node;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
@@ -145,7 +144,6 @@ public class TCPRequestThread implements Runnable {
 		
 		// filter for the HMAC part of the message (message structure: <hmac> !compute <term>)
 		CharSequence hmac = input.subSequence(0, input.indexOf(" !compute"));
-//		System.out.println("HMAC : " + hmac);
 		// generate HMAC with the rest of the message (!compute <term>)
 		byte[] generatedHmac = generateHMAC(input.substring(input.indexOf("!compute")));
 
@@ -157,11 +155,6 @@ public class TCPRequestThread implements Runnable {
 		String result = null;
 		
 		if(byteToString(generatedHmac).equals(decodedHMAC)) {
-			
-			System.out.println(hasOperator(operators.getFirst()));
-			System.out.println(operands.size());
-			
-			
 			// operator and enough operands have arrived
 			if(hasOperator(operators.getFirst()) && operands.size() >= 2) 
 				result = calculate(operators.getFirst(), operands.get(0), operands.get(1));				
@@ -170,12 +163,10 @@ public class TCPRequestThread implements Runnable {
 			
 			// add HMAC to the result string
 			result = byteToString(encryptBase64(generateHMAC(result))) + " " + result;
-			System.out.println("SEND: " + result);
 			
 		} else {
 			result = generatedHmac + " !tempered " + input.substring(input.indexOf(" !compute ") + 10);
 			userResponseStream.println("Message from CloudController got tempered!");
-//			System.out.println("tempered msg: " + result);
 		}
 	
 		return result;
@@ -260,15 +251,9 @@ public class TCPRequestThread implements Runnable {
 		return base64Msg;
 	}
 	
-	private byte[] decryptBase64(String msg) {
-		byte[] base64Msg = Base64.decode(msg);
-		
-		return base64Msg;
-	}
-	
 	private byte[] generateHMAC(String msg) {
 		Key secretKey;
-		byte[] encryptedMessage = null;
+		byte[] hash = null;
 		try {
 			secretKey = Keys.readSecretKey(_ctrl.getHMACKeyFile());
 
@@ -276,13 +261,13 @@ public class TCPRequestThread implements Runnable {
 			Mac hMac = Mac.getInstance(secretKey.getAlgorithm());
 			hMac.init(secretKey);
 			hMac.update(msg.getBytes());
-			encryptedMessage = hMac.doFinal();
+			hash = hMac.doFinal();
 
 		} catch (IOException | InvalidKeyException | NoSuchAlgorithmException e1) {
 			System.out.println("Problems during creating HMAC: " + e1.getMessage());
 		}
 		
-		return encryptedMessage;
+		return hash;
 	}
 	
 	private String byteToString(byte[] byteA) {
