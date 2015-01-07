@@ -4,7 +4,10 @@ import controller.IAdminConsole;
 import model.ComputationRequestInfo;
 import util.Config;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -53,7 +56,52 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 
 	@Override
 	public void run() {
-		// TODO
+		_run = true;
+		String response;
+		BufferedReader consoleReader = new BufferedReader(new InputStreamReader(userRequestStream));
+
+
+		while (_run) {					
+			response = "";
+			// console input
+			String cmd = "";
+
+			try {
+				cmd = consoleReader.readLine();
+				String[] splittedCmd = cmd.split(" ");
+				
+				// handle console input
+				if(cmd.startsWith("!getLogs")) {
+					String[] logs = getLogsSort();
+					for(int i = 0; i< logs.length; i++){
+						userResponseStream.println(logs[i]);
+					}
+					
+				} else if(cmd.startsWith("!statistics")) {
+					userResponseStream.println(credits());
+				} else if(cmd.startsWith("!subscribe")) {
+					userResponseStream.println(credits());
+				} else if(cmd.startsWith("!exit")) {
+					exit();
+				} else {
+					userResponseStream.println("No valid command.");
+				}
+				
+
+			} catch (IOException e) {
+				userResponseStream.println("Problems with the connection.");
+				buildConnection();
+			}
+		}
+	}
+	
+	private String[] getLogsSort() throws RemoteException{
+		String[] zruck;
+		List<ComputationRequestInfo> todo = getLogs();
+		for(int i = 0; i < todo.size();i++){
+			
+		}
+		return null;
 	}
 
 	@Override

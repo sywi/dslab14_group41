@@ -1,17 +1,24 @@
 package node;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.StringTokenizer;
 
@@ -219,9 +226,23 @@ public class TCPRequestThread implements Runnable {
 
 	}
 	
-	public ComputationRequestInfo getLogs(){
+	public ComputationRequestInfo getLogs() throws IOException{
 		ComputationRequestInfo zruck = new ComputationRequestInfo();
 		zruck.setComponentName(componentName);
+		HashMap<String, String> zruckMap = new HashMap<String, String>();
+		File[] logs = new File(_logDir).listFiles();
+		for(int i = 0;i<logs.length;i++){
+			String key = logs[i].getName();
+			BufferedReader bufReader = new BufferedReader(new FileReader(logs[i]));
+			String operation = "";
+			operation += bufReader.readLine();
+			operation += " = ";
+			operation += bufReader.readLine();
+			zruckMap.put(key, operation);
+			bufReader.close();
+		}
+		zruck.setDateResult(zruckMap);
+		
 		return zruck;
 	}
 }
