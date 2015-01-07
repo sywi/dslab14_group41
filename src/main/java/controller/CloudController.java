@@ -34,6 +34,8 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private NodeAliveCtrl _nodeAliveCtrl;
 	private ConsoleInputCloudCtrl _consoleInput;
 	private File _hmacKeyFile;
+	private String _keyFilePath;
+	private String _keyDir;
 
 	/**
 	 * @param componentName
@@ -168,6 +170,8 @@ public class CloudController implements ICloudControllerCli, Runnable {
 			_checkPeriod = Integer.parseInt(prop.getProperty("node.checkPeriod"));
 			_rmax = Integer.parseInt(prop.getProperty("controller.rmax"));
 			_hmacKeyFile = new File(prop.getProperty("hmac.key"));
+			_keyFilePath = prop.getProperty("keys/controller/controller.pem");
+			_keyDir = prop.getProperty("keys.dir");
 		} catch (IOException e) {
 			userResponseStream.println("Couldn't read cloud controller properties. " + e.getMessage());
 		}
@@ -236,6 +240,14 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	
 	public File getHmacKeyFile() {
 		return _hmacKeyFile;
+	}
+	
+	public String getKeyFilePath() {
+		return _keyFilePath;
+	}
+	
+	public String getKeyDir() {
+		return _keyDir;
 	}
 	
 }

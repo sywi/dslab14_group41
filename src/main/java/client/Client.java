@@ -1,6 +1,7 @@
 package client;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -8,11 +9,22 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.security.Key;
+import java.security.Security;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import javax.crypto.SecretKey;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.util.encoders.Base64;
+
 import util.Config;
+import util.EncryptionUtils;
+import util.Keys;
 
 public class Client implements IClientCli, Runnable {
 
@@ -28,6 +40,11 @@ public class Client implements IClientCli, Runnable {
 	private Socket _socket;
 	private PrintWriter _writer;
 	private BufferedReader _reader;
+	private String _controllerKeyPath;
+	private String _keysDir;
+	
+	private IvParameterSpec iv = null;
+	private SecretKey secretKey = null;
 
 	/**
 	 * @param componentName
@@ -87,6 +104,9 @@ public class Client implements IClientCli, Runnable {
 					userResponseStream.println(response);
 				} else if(cmd.startsWith("!exit")) {
 					exit();
+				} else if (cmd.startsWith("!authenticate")) {
+					response = authenticate(splittedCmd[1]);
+					userResponseStream.println(response);
 				} else {
 					userResponseStream.println("No valid command.");
 				}
@@ -104,6 +124,8 @@ public class Client implements IClientCli, Runnable {
 			_socket = new Socket(_host, _tcpPort);
 			_reader = new BufferedReader(new InputStreamReader(_socket.getInputStream()));
 			_writer = new PrintWriter(_socket.getOutputStream(), true);
+			authenticate(componentName);
+
 		} catch (IOException e) {
 			userResponseStream.println("Connection to server couldn't be established! Host: " + _host + " TCP Port: " + _tcpPort);
 			System.exit(1);
@@ -112,9 +134,14 @@ public class Client implements IClientCli, Runnable {
 
 	@Override
 	public String login(String username, String password) throws IOException {
-		_writer.println("!login " + username + " " + password);
+		String encryptedMsg = EncryptionUtils.cryptAES(1, secretKey, iv, "!login " + username + " " + password);
+		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
+		_writer.println(encryptedMsg64);
 
-		return _reader.readLine();
+		String responseAES64 = _reader.readLine();
+		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
+
+		return EncryptionUtils.cryptAES(2, secretKey, iv, responseAES);
 	}
 
 	/**
@@ -122,38 +149,64 @@ public class Client implements IClientCli, Runnable {
 	 */
 	@Override
 	public String logout() throws IOException {
-		_writer.println("!logout");
+		String encryptedMsg = util.EncryptionUtils.cryptAES(1, secretKey, iv, "!logout");
+		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
+		_writer.println(encryptedMsg64);
 
-		return _reader.readLine();
+		String responseAES64 = _reader.readLine();
+		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
+
+		return util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES);
 	}
 
 	@Override
 	public String credits() throws IOException {
-		_writer.println("!credits");
-		
-		return _reader.readLine();
+		String encryptedMsg = util.EncryptionUtils.cryptAES(1, secretKey, iv, "!credits");
+		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
+		_writer.println(encryptedMsg64);
+
+		String responseAES64 = _reader.readLine();
+		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
+
+		return util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES);
 	}
 
 	@Override
 	public String buy(long credits) throws IOException {
-		_writer.println("!buy " + credits);
+		String encryptedMsg = util.EncryptionUtils.cryptAES(1, secretKey, iv,"!buy " + credits);
+		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
+		_writer.println(encryptedMsg64);
 
-		return credits();
+		String responseAES64 = _reader.readLine();
+		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
+
+		return util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES);
 	}
 
 	@Override
 	public String list() throws IOException {
-		_writer.println("!list");
+		String encryptedMsg = util.EncryptionUtils.cryptAES(1, secretKey, iv,"!list");
+		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
+		_writer.println(encryptedMsg64);
 
-		return _reader.readLine();
+		String responseAES64 = _reader.readLine();
+		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
+
+		return util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES);
 	}
 
 	@Override
 	public String compute(String term) throws IOException {
-		_writer.println(term);
-		
-		return _reader.readLine();
+		String encryptedMsg = util.EncryptionUtils.cryptAES(1, secretKey, iv,term);
+		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
+		_writer.println(encryptedMsg64);
+
+		String responseAES64 = _reader.readLine();
+		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
+
+		return util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES);
 	}
+
 
 	/**
 	 * close all open connections
@@ -180,12 +233,50 @@ public class Client implements IClientCli, Runnable {
 		e.shutdown();
 	}
 
+	//TODO: go through...
 	// --- Commands needed for Lab 2. Please note that you do not have to
 	// implement them for the first submission. ---
 	@Override
 	public String authenticate(String username) throws IOException {
-		// TODO Auto-generated method stub
-		return null;
+		final byte[] clientChallenge = util.EncryptionUtils.createSecureRandom();
+		String clientChallenge64 = new String(Base64.encode(clientChallenge));
+
+		File pemFile = new File(_controllerKeyPath);
+
+		Key key = Keys.readPublicPEM(pemFile);
+		String cipheredMsg = EncryptionUtils.encryptRSA(key, "!authenticate " + username + " " + clientChallenge64);
+
+		String cipheredMsg64 = new String(Base64.encode(cipheredMsg.getBytes()));
+
+		// send first message: !authenticate <user> <client-challenge>
+		_writer.println(cipheredMsg64);
+
+		// receive second message: !ok <client-challenge> <controller-challenge>
+		// <secret-key> <iv-parameter>
+		String encryptedControllerResponse64 = _reader.readLine();
+		String encryptedControllerResponse = new String(Base64.decode(encryptedControllerResponse64.getBytes()));
+		String controllerResponse = util.EncryptionUtils.decryptRSA(_keysDir + "/" + username + ".pem", encryptedControllerResponse);
+
+		if (controllerResponse.contains("!ok")) {
+			String[] splitted = controllerResponse.split(" ");
+			byte[] returnedClientChallenge = Base64.decode(splitted[1].getBytes());
+			
+			if (returnedClientChallenge == clientChallenge) {
+				byte[] secKey = Base64.decode(splitted[3]);
+				secretKey = new SecretKeySpec(secKey, 0, secKey.length, "AES");
+				byte[] ivArr = Base64.decode(splitted[4]);
+				iv = new IvParameterSpec(ivArr);
+				String encryptedMsg = util.EncryptionUtils.cryptAES(1,secretKey, iv, splitted[2]);
+				String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
+				// send third message: <controller-challenge>
+				_writer.println(encryptedMsg64);
+			} else {
+				System.out.println("Client challenges don't match!");
+			}
+		}
+
+		return "Successfully authenticated.";
+
 	}
 
 	/**
@@ -199,6 +290,8 @@ public class Client implements IClientCli, Runnable {
 			prop.load(input);
 			_host = prop.getProperty("controller.host");
 			_tcpPort = Integer.parseInt(prop.getProperty("controller.tcp.port"));
+			_controllerKeyPath = prop.getProperty("controller.key");
+			_keysDir = prop.getProperty("keys.dir");
 			input.close();
 		} catch (IOException e) {
 			userResponseStream.println("Couldn't read client properties.");
