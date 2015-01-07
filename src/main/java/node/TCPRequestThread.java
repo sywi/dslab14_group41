@@ -15,6 +15,8 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.StringTokenizer;
 
+import model.ComputationRequestInfo;
+
 public class TCPRequestThread implements Runnable {
 	private Socket _socket;
 	private String _logDir;
@@ -215,6 +217,12 @@ public class TCPRequestThread implements Runnable {
 			userResponseStream.println("Problems while writing to log file: " + e.getMessage());
 		}
 
+	}
+	
+	public ComputationRequestInfo getLogs(){
+		ComputationRequestInfo zruck = new ComputationRequestInfo();
+		zruck.setComponentName(componentName);
+		return zruck;
 	}
 }
 
