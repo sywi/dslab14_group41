@@ -29,6 +29,7 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 	private InputStream userRequestStream;
 	private PrintStream userResponseStream;
 	private IAdminConsole controller;
+	private boolean _run;
 
 	/**
 	 * @param componentName
@@ -78,9 +79,9 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 					}
 					
 				} else if(cmd.startsWith("!statistics")) {
-					userResponseStream.println(credits());
+					userResponseStream.println();
 				} else if(cmd.startsWith("!subscribe")) {
-					userResponseStream.println(credits());
+					userResponseStream.println();
 				} else if(cmd.startsWith("!exit")) {
 					exit();
 				} else {
@@ -90,15 +91,20 @@ public class AdminConsole implements IAdminConsole, INotificationCallback, Runna
 
 			} catch (IOException e) {
 				userResponseStream.println("Problems with the connection.");
-				buildConnection();
 			}
 		}
 	}
 	
+	private void exit() {
+		// TODO Auto-generated method stub
+		
+	}
+
 	private String[] getLogsSort() throws RemoteException{
 		String[] zruck;
 		List<ComputationRequestInfo> todo = getLogs();
 		for(int i = 0; i < todo.size();i++){
+			ComputationRequestInfo act = todo.get(i);
 			
 		}
 		return null;

@@ -274,8 +274,8 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 		LinkedHashMap<Character, Long> zruck = new LinkedHashMap<Character, Long>();
 		HashMap<Character, Integer> temp = _clientRequestWaiter.getOperators();
 		while (!temp.isEmpty()) {
-			Set tempKeys = temp.keySet();;
-			Character actKey;
+			Set<Character> tempKeys = temp.keySet();;
+			Character actKey = ' ';
 			int maxValue = 0;
 			if(tempKeys.contains('+')){
 				actKey='+';
@@ -299,7 +299,7 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 					maxValue=temp.get('/');
 				}
 			}
-			zruck.put(actKey, temp.get(actKey));
+			zruck.put(actKey, temp.get(actKey).longValue());
 		}
 		return zruck;
 	}
