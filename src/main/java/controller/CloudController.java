@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -59,10 +60,11 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 	 * @param userResponseStream
 	 *            the output stream to write the console output to
 	 * @throws RemoteException
+	 * @throws AlreadyBoundException 
 	 */
 	public CloudController(String componentName, Config config,
 			InputStream userRequestStream, PrintStream userResponseStream)
-			throws RemoteException {
+			throws RemoteException, AlreadyBoundException {
 		this.componentName = componentName;
 		this.config = config;
 		this.userRequestStream = userRequestStream;
@@ -72,7 +74,9 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 		readClientProperties();
 		LocateRegistry.createRegistry(config.getInt("controller.rmi.port"));
 		Registry registry = LocateRegistry.getRegistry();
-		registry.rebind(config.getString("binding.name"), this);
+		IAdminConsole stub =  (IAdminConsole) UnicastRemoteObject.exportObject(this, 0);
+//		Registry.bind(config.getString("binding.name"), this);
+		registry.rebind(config.getString("binding.name"), stub);
 
 	}
 
@@ -165,8 +169,9 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 	 *            the first argument is the name of the {@link CloudController}
 	 *            component
 	 * @throws RemoteException
+	 * @throws AlreadyBoundException 
 	 */
-	public static void main(String[] args) throws RemoteException {
+	public static void main(String[] args) throws RemoteException, AlreadyBoundException {
 		CloudController cloudController = new CloudController(args[0],
 				new Config("controller"), System.in, System.out);
 
