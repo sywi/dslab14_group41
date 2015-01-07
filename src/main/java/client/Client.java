@@ -233,7 +233,6 @@ public class Client implements IClientCli, Runnable {
 		e.shutdown();
 	}
 
-	//TODO: go through...
 	// --- Commands needed for Lab 2. Please note that you do not have to
 	// implement them for the first submission. ---
 	@Override
