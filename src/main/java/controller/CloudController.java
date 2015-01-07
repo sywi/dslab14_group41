@@ -256,14 +256,13 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 	@Override
 	public boolean subscribe(String username, int credits,
 			INotificationCallback callback) throws RemoteException {
-		_clientRequestWaiter.setUserWatchList(username, credits);
+		_clientRequestWaiter.setUserWatchList(username, credits, callback);
 		return true;
 	}
 
 	@Override
 	public List<ComputationRequestInfo> getLogs() throws RemoteException {
-		// TODO Auto-generated method stub
-		return null;
+		return _clientRequestWaiter.getLogs();
 	}
 
 	@Override

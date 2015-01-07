@@ -3,9 +3,14 @@ package controller;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.rmi.RemoteException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import model.ComputationRequestInfo;
+import admin.INotificationCallback;
 
 public class ClientRequestWaiterCloudCtrl implements Runnable {
 	
@@ -61,8 +66,12 @@ public class ClientRequestWaiterCloudCtrl implements Runnable {
 		return thread.getOperators();
 	}
 	
-	public void setUserWatchList(String client, int threshold){
-		thread.setUserWatchList(client, threshold);
+	public void setUserWatchList(String client, int threshold, INotificationCallback callback){
+		thread.setUserWatchList(client, threshold,callback);
+	}
+	
+	public List<ComputationRequestInfo> getLogs() throws RemoteException {
+		return thread.getLogs();
 	}
 	
 	public void terminate() throws IOException {

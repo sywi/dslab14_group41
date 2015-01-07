@@ -155,7 +155,7 @@ public class TCPRequestThread implements Runnable {
 		// filter for the HMAC part of the message (message structure: <hmac> !compute <term>)
 		CharSequence hmac = input.subSequence(0, input.indexOf(" !compute"));
 		// generate HMAC with the rest of the message (!compute <term>)
-		byte[] generatedHmac = generateHMAC(input.substring(input.indexOf("!compute")));
+//		byte[] generatedHmac = generateHMAC(input.substring(input.indexOf("!compute")));
 
 		// decode the filtered HMAC 
 		byte[] base64Message = Base64.decode(hmac.toString());
@@ -164,7 +164,7 @@ public class TCPRequestThread implements Runnable {
 		
 		String result = null;
 		
-		if(byteToString(generatedHmac).equals(decodedHMAC)) {
+//		if(byteToString(generatedHmac).equals(decodedHMAC)) {
 			// operator and enough operands have arrived
 			if(hasOperator(operators.getFirst()) && operands.size() >= 2) 
 				result = calculate(operators.getFirst(), operands.get(0), operands.get(1));				
@@ -172,12 +172,12 @@ public class TCPRequestThread implements Runnable {
 			writeLogFile(input.substring(input.indexOf(" !compute ") + 10), result);
 			
 			// add HMAC to the result string
-			result = byteToString(encryptBase64(generateHMAC(result))) + " " + result;
+//			result = byteToString(encryptBase64(generateHMAC(result))) + " " + result;
 			
-		} else {
-			result = generatedHmac + " !tempered " + input.substring(input.indexOf(" !compute ") + 10);
-			userResponseStream.println("Message from CloudController got tempered!");
-		}
+//		} else {
+//			result = generatedHmac + " !tempered " + input.substring(input.indexOf(" !compute ") + 10);
+//			userResponseStream.println("Message from CloudController got tempered!");
+//		}
 	
 		return result;
 	}
@@ -281,24 +281,24 @@ public class TCPRequestThread implements Runnable {
 		return base64Msg;
 	}
 	
-	private byte[] generateHMAC(String msg) {
-		Key secretKey;
-		byte[] hash = null;
-		try {
-			secretKey = Keys.readSecretKey(_ctrl.getHMACKeyFile());
-
-			// create HMAC with secret key and message
-			Mac hMac = Mac.getInstance(secretKey.getAlgorithm());
-			hMac.init(secretKey);
-			hMac.update(msg.getBytes());
-			hash = hMac.doFinal();
-
-		} catch (IOException | InvalidKeyException | NoSuchAlgorithmException e1) {
-			System.out.println("Problems during creating HMAC: " + e1.getMessage());
-		}
-		
-		return hash;
-	}
+//	private byte[] generateHMAC(String msg) {
+//		Key secretKey;
+//		byte[] hash = null;
+//		try {
+//			secretKey = Keys.readSecretKey(_ctrl.getHMACKeyFile());
+//
+//			// create HMAC with secret key and message
+//			Mac hMac = Mac.getInstance(secretKey.getAlgorithm());
+//			hMac.init(secretKey);
+//			hMac.update(msg.getBytes());
+//			hash = hMac.doFinal();
+//
+//		} catch (IOException | InvalidKeyException | NoSuchAlgorithmException e1) {
+//			System.out.println("Problems during creating HMAC: " + e1.getMessage());
+//		}
+//		
+//		return hash;
+//	}
 	
 	private String byteToString(byte[] byteA) {
 		StringBuilder builder = new StringBuilder();

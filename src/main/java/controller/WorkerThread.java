@@ -3,19 +3,26 @@ package controller;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.HashMap;
+import java.rmi.RemoteException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.StringTokenizer;
 
 import javax.crypto.Mac;
 
+import model.ComputationRequestInfo;
+
 import org.bouncycastle.util.encoders.Base64;
 
+import admin.INotificationCallback;
 import util.Keys;
 
 public class WorkerThread implements Runnable {
@@ -25,6 +32,7 @@ public class WorkerThread implements Runnable {
 	private CloudController _ctrl;
 	private HashMap<Character, Integer> _operators;
 	private HashMap<String, Integer> _userWatchList;
+	private INotificationCallback callback;
 	
 	protected WorkerThread(Socket socket, CloudController ctrl) {
 		_socket = socket;
@@ -137,7 +145,7 @@ public class WorkerThread implements Runnable {
 		}
 	}
 	
-	private String compute(String cmd) {
+	private String compute(String cmd) throws RemoteException {
 
 		cmd = cmd.replace("!compute", "");
 		LinkedList<Integer> operands = new LinkedList<>();
@@ -194,7 +202,7 @@ public class WorkerThread implements Runnable {
 						String msg = "!compute " + Integer.toString(operand1) + " " + operator + " " + Integer.toString(operand2);
 
 						// add HMAC to message
-						msg = byteToString(encryptBase64(generateHMAC(msg))) + " " + msg;
+					//	msg = byteToString(encryptBase64(generateHMAC(msg))) + " " + msg;
 
 						writer.println(msg);
 
@@ -226,10 +234,10 @@ public class WorkerThread implements Runnable {
 							}
 						}
 
-						if(tempResult == null && hmacCheck) {
-							hmacCheck = checkHMAC(hmac, warmingMsg);
-						} else if(hmacCheck)
-							hmacCheck = checkHMAC(hmac, Integer.toString(tempResult));
+//						if(tempResult == null && hmacCheck) {
+//							hmacCheck = checkHMAC(hmac, warmingMsg);
+//						} else if(hmacCheck)
+//							hmacCheck = checkHMAC(hmac, Integer.toString(tempResult));
 
 						
 						writer.close();
@@ -258,7 +266,7 @@ public class WorkerThread implements Runnable {
 			// TODO rückgabe fnalisieren
 			if(_userWatchList.containsKey(_user.getName())){
 				if(_userWatchList.get(_user.getName())<_user.getCredits()){
-					
+					callback.notify(_user.getName(), _userWatchList.get(_user.getName()));
 				}
 			}
 
@@ -290,7 +298,6 @@ public class WorkerThread implements Runnable {
 		return true;
 	}
 	
-
 	public String list() {
 		LinkedList<Character> availableOperators = new LinkedList<>();
 		
@@ -347,7 +354,24 @@ public class WorkerThread implements Runnable {
 	public HashMap getOperators(){
 		return _operators;
 	}
-	public void setUserWatchList(String client, int threshold){
+	public void setUserWatchList(String client, int threshold, INotificationCallback callback){
 		_userWatchList.put(client, threshold);
+		this.callback=callback;
+	}
+
+	public List<ComputationRequestInfo> getLogs() throws IOException {
+		List<ComputationRequestInfo> logs = new LinkedList<ComputationRequestInfo>();
+		LinkedList<Node> nodes = new LinkedList<>();
+		for (Integer key : _ctrl.getNodes().keySet()) {
+			nodes.add(_ctrl.getNodes().get(key));
+		}
+		for (Node n : nodes) {
+		Socket socket = new Socket(n.getAddress(), n.getTcpPort());
+		OutputStream os = socket.getOutputStream();
+		ObjectOutputStream oos = new ObjectOutputStream(os);
+//		PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
+//		BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		}
+		return logs;
 	}
 }
