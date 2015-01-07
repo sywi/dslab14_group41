@@ -261,8 +261,18 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 	}
 
 	@Override
-	public List<ComputationRequestInfo> getLogs() throws RemoteException {
-		return _clientRequestWaiter.getLogs();
+	public List<ComputationRequestInfo> getLogs() {
+		try {
+			return _clientRequestWaiter.getLogs();
+		} catch (IOException e) {
+			
+			e.printStackTrace();
+			return null;
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
 	}
 
 	@Override

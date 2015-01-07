@@ -6,6 +6,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.Reader;
@@ -88,6 +90,13 @@ public class TCPRequestThread implements Runnable {
 				// no need to answer on a !commit
 				response = false;
 				_ctrl.setCurrentResourceLevel(_ctrl.getPossibleResourceLevel());
+			} else if(input.startsWith("!logs")) {
+				ComputationRequestInfo log = getLogs();			
+				OutputStream os = _socket.getOutputStream();
+				ObjectOutputStream oos = new ObjectOutputStream(os);
+				oos.writeObject(log);
+
+				response = false;
 			} else if(input.startsWith("!rollback")) {
 				// no need to answer on a !rollback
 				response = false;

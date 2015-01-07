@@ -70,7 +70,7 @@ public class ClientRequestWaiterCloudCtrl implements Runnable {
 		thread.setUserWatchList(client, threshold,callback);
 	}
 	
-	public List<ComputationRequestInfo> getLogs() throws RemoteException {
+	public List<ComputationRequestInfo> getLogs() throws IOException, ClassNotFoundException {
 		return thread.getLogs();
 	}
 	

@@ -3,6 +3,7 @@ package controller;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
@@ -359,7 +360,7 @@ public class WorkerThread implements Runnable {
 		this.callback=callback;
 	}
 
-	public List<ComputationRequestInfo> getLogs() throws IOException {
+	public List<ComputationRequestInfo> getLogs() throws IOException, ClassNotFoundException {
 		List<ComputationRequestInfo> logs = new LinkedList<ComputationRequestInfo>();
 		LinkedList<Node> nodes = new LinkedList<>();
 		for (Integer key : _ctrl.getNodes().keySet()) {
@@ -367,8 +368,17 @@ public class WorkerThread implements Runnable {
 		}
 		for (Node n : nodes) {
 		Socket socket = new Socket(n.getAddress(), n.getTcpPort());
-		OutputStream os = socket.getOutputStream();
-		ObjectOutputStream oos = new ObjectOutputStream(os);
+		PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
+		BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		ObjectInputStream is = new ObjectInputStream( socket.getInputStream());
+		
+		writer.println("!logs");
+		logs.add((ComputationRequestInfo) is.readObject());
+		socket.close();
+		reader.close();
+		
+//		OutputStream os = socket.getOutputStream();
+//		ObjectOutputStream oos = new ObjectOutputStream(os);
 //		PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
 //		BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 		}
