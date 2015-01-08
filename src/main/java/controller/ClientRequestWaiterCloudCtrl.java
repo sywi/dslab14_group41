@@ -3,8 +3,14 @@ package controller;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.rmi.RemoteException;
+import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import model.ComputationRequestInfo;
+import admin.INotificationCallback;
 
 public class ClientRequestWaiterCloudCtrl implements Runnable {
 	
@@ -13,6 +19,7 @@ public class ClientRequestWaiterCloudCtrl implements Runnable {
 	private ServerSocket _socket;
 	private CloudController _cloudCtrl;
 	private boolean _isAlive;
+	private WorkerThread thread;
 	
 	public ClientRequestWaiterCloudCtrl(int tcpPort, CloudController cloudCtrl) {
 		_tcpPort = tcpPort;
@@ -38,7 +45,7 @@ public class ClientRequestWaiterCloudCtrl implements Runnable {
 				// socket waiting (accept() is a blocking method)
 				Socket socket = _socket.accept();
 				// client request has arrived, new thread will be generated
-				WorkerThread thread = new WorkerThread(socket, _cloudCtrl);
+				thread = new WorkerThread(socket, _cloudCtrl);
 				// generated thread is given to the Thread Pool
 				_clientPool.execute(thread);
 			} catch (IOException e) {
@@ -53,6 +60,18 @@ public class ClientRequestWaiterCloudCtrl implements Runnable {
 			}
 		}
 
+	}
+	
+	public HashMap<Character, Integer> getOperators(){
+		return thread.getOperators();
+	}
+	
+	public void setUserWatchList(String client, int threshold, INotificationCallback callback){
+		thread.setUserWatchList(client, threshold,callback);
+	}
+	
+	public List<ComputationRequestInfo> getLogs() throws IOException, ClassNotFoundException {
+		return thread.getLogs();
 	}
 	
 	public void terminate() throws IOException {

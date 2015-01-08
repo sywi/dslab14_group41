@@ -4,22 +4,30 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.HashMap;
+import java.rmi.RemoteException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.StringTokenizer;
 
 import javax.crypto.KeyGenerator;
 import javax.crypto.Mac;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
+import model.ComputationRequestInfo;
 
 import org.bouncycastle.util.encoders.Base64;
 
+import admin.INotificationCallback;
 import util.EncryptionUtils;
 import util.Keys;
 
@@ -31,10 +39,15 @@ public class WorkerThread implements Runnable {
 	private boolean authenticated = false;
 	private IvParameterSpec iv = null;
 	private SecretKey secretKey = null;
+	private HashMap<Character, Integer> _operators;
+	private HashMap<String, Integer> _userWatchList;
+	private INotificationCallback callback;
 	
 	protected WorkerThread(Socket socket, CloudController ctrl) {
 		_socket = socket;
 		_ctrl = ctrl;
+		_operators = new HashMap<>();
+		_userWatchList = new HashMap<>();
 	}
 
 	@Override
@@ -366,6 +379,17 @@ public class WorkerThread implements Runnable {
 				_ctrl.getPrintStream().println("Message from Node got tempered!");
 				result = "Message got tempered!";
 			}
+			// TODO r?ckgabe finalisieren
+			if(_userWatchList.containsKey(_user.getName())){
+				if(_userWatchList.get(_user.getName()) < _user.getCredits()) {
+					try {
+						callback.notify(_user.getName(), _userWatchList.get(_user.getName()));
+					} catch (RemoteException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+			}
 
 		} else {
 			result = "Operation could not be done. Not enough credits.";
@@ -495,5 +519,38 @@ public class WorkerThread implements Runnable {
 			return true;
 
 		return false;
+	}
+	
+	public HashMap getOperators(){
+		return _operators;
+	}
+	public void setUserWatchList(String client, int threshold, INotificationCallback callback){
+		_userWatchList.put(client, threshold);
+		this.callback=callback;
+	}
+
+	public List<ComputationRequestInfo> getLogs() throws IOException, ClassNotFoundException {
+		List<ComputationRequestInfo> logs = new LinkedList<ComputationRequestInfo>();
+		LinkedList<Node> nodes = new LinkedList<>();
+		for (Integer key : _ctrl.getNodes().keySet()) {
+			nodes.add(_ctrl.getNodes().get(key));
+		}
+		for (Node n : nodes) {
+		Socket socket = new Socket(n.getAddress(), n.getTcpPort());
+		PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
+		BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		ObjectInputStream is = new ObjectInputStream( socket.getInputStream());
+		
+		writer.println("!logs");
+		logs.add((ComputationRequestInfo) is.readObject());
+		socket.close();
+		reader.close();
+		
+//		OutputStream os = socket.getOutputStream();
+//		ObjectOutputStream oos = new ObjectOutputStream(os);
+//		PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
+//		BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		}
+		return logs;
 	}
 }

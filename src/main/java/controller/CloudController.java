@@ -5,16 +5,32 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
+import java.rmi.AlreadyBoundException;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
+import java.security.Key;
 import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import model.ComputationRequestInfo;
+import admin.AdminConsole;
+import admin.INotificationCallback;
 import util.Config;
 
-public class CloudController implements ICloudControllerCli, Runnable {
+public class CloudController implements IAdminConsole, ICloudControllerCli,
+		Runnable {
 
 	private String componentName;
 	private Config config;
@@ -36,6 +52,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	private File _hmacKeyFile;
 	private String _keyFilePath;
 	private String _keyDir;
+	private Registry registry;
 
 	/**
 	 * @param componentName
@@ -46,9 +63,12 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	 *            the input stream to read user input from
 	 * @param userResponseStream
 	 *            the output stream to write the console output to
+	 * @throws RemoteException
+	 * @throws AlreadyBoundException
 	 */
 	public CloudController(String componentName, Config config,
-			InputStream userRequestStream, PrintStream userResponseStream) {
+			InputStream userRequestStream, PrintStream userResponseStream)
+			throws RemoteException, AlreadyBoundException {
 		this.componentName = componentName;
 		this.config = config;
 		this.userRequestStream = userRequestStream;
@@ -56,29 +76,45 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		// read properties
 		readCtrlProperties();
 		readClientProperties();
+
+		try {
+			registry = LocateRegistry.createRegistry(config
+					.getInt("controller.rmi.port"));
+		} catch (RemoteException e) {
+			registry = LocateRegistry.getRegistry(config
+					.getInt("controller.rmi.port"));
+		}
+
+		// Registry registry = LocateRegistry.getRegistry();
+		UnicastRemoteObject.exportObject(this, 0);
+		// IAdminConsole stub = (IAdminConsole)
+		// UnicastRemoteObject.exportObject(
+		// this, 0);
+		// Registry.bind(config.getString("binding.name"), this);
+
+		registry.rebind(config.getString("binding.name"), this);
+
 	}
 
 	@Override
 	public void run() {
-		
+
 		// initiating new Thread Pool
 		_executorService = Executors.newCachedThreadPool();
-		
-		
+
 		// handling client requests
 		_clientRequestWaiter = new ClientRequestWaiterCloudCtrl(_tcpPort, this);
 		_executorService.execute(_clientRequestWaiter);
-		
-		
+
 		// waiting for packages from nodes
 		_nodes = new ConcurrentHashMap<>();
 		_nodePackageWaiter = new NodePackageWaiter(this, _udpPort);
 		_executorService.execute(_nodePackageWaiter);
-				
+
 		// check if every node is alive
 		_nodeAliveCtrl = new NodeAliveCtrl(this);
 		_executorService.execute(_nodeAliveCtrl);
-		
+
 		// handle console input
 		_consoleInput = new ConsoleInputCloudCtrl(this);
 		_executorService.execute(_consoleInput);
@@ -90,7 +126,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 		StringBuilder builder = new StringBuilder();
 		int i = 1;
 		Node currNode;
-		
+
 		for (Integer key : _nodes.keySet()) {
 			currNode = _nodes.get(key);
 			builder.append(i++ + ". IP: " + currNode.getAddress() + " Port: " + currNode.getTcpPort());
@@ -138,6 +174,13 @@ public class CloudController implements ICloudControllerCli, Runnable {
 				
 		userRequestStream.close();
 		userResponseStream.close();
+		try {
+			registry.unbind(config.getString("binding.name"));
+		} catch (NotBoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		UnicastRemoteObject.exportObject(this, 0);
 		_executorService.shutdownNow();
 
 
@@ -148,8 +191,11 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	 * @param args
 	 *            the first argument is the name of the {@link CloudController}
 	 *            component
+	 * @throws RemoteException
+	 * @throws AlreadyBoundException
 	 */
-	public static void main(String[] args) {
+	public static void main(String[] args) throws RemoteException,
+			AlreadyBoundException {
 		CloudController cloudController = new CloudController(args[0],
 				new Config("controller"), System.in, System.out);
 		
@@ -237,7 +283,78 @@ public class CloudController implements ICloudControllerCli, Runnable {
 	public int getRmax() {
 		return _rmax;
 	}
-	
+
+	@Override
+	public boolean subscribe(String username, int credits,
+			INotificationCallback callback) throws RemoteException {
+		_clientRequestWaiter.setUserWatchList(username, credits, callback);
+		return true;
+	}
+
+	@Override
+	public List<ComputationRequestInfo> getLogs() {
+		try {
+			return _clientRequestWaiter.getLogs();
+		} catch (IOException e) {
+
+			e.printStackTrace();
+			return null;
+		} catch (ClassNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	@Override
+	public LinkedHashMap<Character, Long> statistics() throws RemoteException {
+		LinkedHashMap<Character, Long> zruck = new LinkedHashMap<Character, Long>();
+		HashMap<Character, Integer> temp = _clientRequestWaiter.getOperators();
+		while (!temp.isEmpty()) {
+			Set<Character> tempKeys = temp.keySet();
+			;
+			Character actKey = ' ';
+			int maxValue = 0;
+			if (tempKeys.contains('+')) {
+				actKey = '+';
+				maxValue = temp.get('+');
+			}
+			if (tempKeys.contains('-')) {
+				if (temp.get('-') < maxValue) {
+					actKey = '-';
+					maxValue = temp.get('-');
+				}
+			}
+			if (tempKeys.contains('*')) {
+				if (temp.get('*') < maxValue) {
+					actKey = '*';
+					maxValue = temp.get('*');
+				}
+			}
+			if (tempKeys.contains('/')) {
+				if (temp.get('/') < maxValue) {
+					actKey = '/';
+					maxValue = temp.get('/');
+				}
+			}
+			zruck.put(actKey, temp.get(actKey).longValue());
+		}
+		return zruck;
+	}
+
+	@Override
+	public Key getControllerPublicKey() throws RemoteException {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void setUserPublicKey(String username, byte[] key)
+			throws RemoteException {
+		// TODO Auto-generated method stub
+
+	}
+
 	public File getHmacKeyFile() {
 		return _hmacKeyFile;
 	}

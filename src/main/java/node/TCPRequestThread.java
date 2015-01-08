@@ -3,18 +3,28 @@ package node;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.net.Socket;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.security.InvalidKeyException;
+import java.security.Key;
+import java.security.NoSuchAlgorithmException;
 import java.security.InvalidKeyException;
 import java.security.Key;
 import java.security.NoSuchAlgorithmException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.StringTokenizer;
 
@@ -23,6 +33,8 @@ import javax.crypto.Mac;
 import org.bouncycastle.util.encoders.Base64;
 
 import util.Keys;
+
+import model.ComputationRequestInfo;
 
 public class TCPRequestThread implements Runnable {
 	private Socket _socket;
@@ -78,6 +90,13 @@ public class TCPRequestThread implements Runnable {
 				// no need to answer on a !commit
 				response = false;
 				_ctrl.setCurrentResourceLevel(_ctrl.getPossibleResourceLevel());
+			} else if(input.startsWith("!logs")) {
+				ComputationRequestInfo log = getLogs();			
+				OutputStream os = _socket.getOutputStream();
+				ObjectOutputStream oos = new ObjectOutputStream(os);
+				oos.writeObject(log);
+
+				response = false;
 			} else if(input.startsWith("!rollback")) {
 				// no need to answer on a !rollback
 				response = false;
@@ -243,6 +262,26 @@ public class TCPRequestThread implements Runnable {
 			userResponseStream.println("Problems while writing to log file: " + e.getMessage());
 		}
 
+	}
+	
+	public ComputationRequestInfo getLogs() throws IOException{
+		ComputationRequestInfo zruck = new ComputationRequestInfo();
+		zruck.setComponentName(componentName);
+		HashMap<String, String> zruckMap = new HashMap<String, String>();
+		File[] logs = new File(_logDir).listFiles();
+		for(int i = 0;i<logs.length;i++){
+			String key = logs[i].getName();
+			BufferedReader bufReader = new BufferedReader(new FileReader(logs[i]));
+			String operation = "";
+			operation += bufReader.readLine();
+			operation += " = ";
+			operation += bufReader.readLine();
+			zruckMap.put(key, operation);
+			bufReader.close();
+		}
+		zruck.setDateResult(zruckMap);
+		
+		return zruck;
 	}
 	
 	private byte[] encryptBase64(byte[] msg) {

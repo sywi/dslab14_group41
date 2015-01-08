@@ -1,6 +1,7 @@
 *	CloudController	controller
 *	Client			alice
 *	Node			node1
+*	AdminConsole	admin
 
 
 
@@ -9,6 +10,13 @@ alice:		!authenticate alice
 
 alice:		!login alice 12345
 >			verify("success")
+
+admin:		!subscribe alice 400
+
+admin:		!statistics
+
+admin:		!getLogs
+
 
 alice:		!credits
 >			verify("500")
