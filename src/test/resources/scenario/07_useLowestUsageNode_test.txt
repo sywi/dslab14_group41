@@ -3,6 +3,8 @@
 *	Node			node1
 *	Node			node4
 
+alice:		!authenticate alice
+
 alice:		!login alice 12345
 >			verify("success")
 

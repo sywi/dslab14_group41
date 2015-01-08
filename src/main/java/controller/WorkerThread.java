@@ -70,10 +70,9 @@ public class WorkerThread implements Runnable {
 				}
 
 				if (cmdAES64 != null && authenticated) {
-					String cmdAES = new String(Base64.decode(cmdAES64
-							.getBytes()));
-					String cmd = new String(util.EncryptionUtils.cryptAES(2, secretKey,
-							iv, cmdAES));
+//					String cmdAES = new String(Base64.decode(cmdAES64
+//							.getBytes()));
+					String cmd = new String(util.EncryptionUtils.cryptAESBytes(2, secretKey, iv, Base64.decode(cmdAES64.getBytes())));
 					String[] splittedCmd = cmd.split(" ");
 
 					if (_user == null && !splittedCmd[0].equals("!login")) {

@@ -1,0 +1,32 @@
+*	CloudController	controller
+*	Client			alice
+*	Node			node1
+*	Node			node2
+
+alice:		!authenticate alice
+
+alice:		!login alice 23456
+>			verify("Wrong username or password.")
+
+alice:		!login alice 12345
+>			verify("success")
+
+alice:		!login bill 23456
+>			verify("already logged in")
+
+controller:	!users
+>			verify(".*alice.*online.*bill.*offline.*", T(test.util.Flag).REGEX)
+
+alice:		!credits
+>			verify("500")
+
+alice:		!buy 1000
+>			verify(".*1500.*", T(test.util.Flag).REGEX)
+
+alice:		!list
+>			verify("/, +, -")
+
+controller:	!exit
+alice:		!exit
+node1:		!exit
+node2:		!exit

@@ -2,6 +2,8 @@
 *	Client			alice
 *	Node			node2
 
+alice:		!authenticate alice
+
 alice:		!login alice 12345
 >			verify("success")
 

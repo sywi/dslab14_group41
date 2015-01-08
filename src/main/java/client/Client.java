@@ -75,6 +75,7 @@ public class Client implements IClientCli, Runnable {
 		_run = true;
 		String response;
 		BufferedReader consoleReader = new BufferedReader(new InputStreamReader(userRequestStream));
+		boolean authenticated = false;
 
 
 		while (_run) {					
@@ -86,28 +87,35 @@ public class Client implements IClientCli, Runnable {
 				cmd = consoleReader.readLine();
 				String[] splittedCmd = cmd.split(" ");
 				
+				
+				
 				// handle console input
-				if(cmd.startsWith("!login") && splittedCmd.length >= 3) {
-					userResponseStream.println(login(splittedCmd[1],splittedCmd[2]));
-				} else if(cmd.startsWith("!credits")) {
-					userResponseStream.println(credits());
-				} else if(cmd.startsWith("!buy")  && splittedCmd.length >= 2) {
-					response = buy(Long.parseLong(splittedCmd[1]));
-					userResponseStream.println("You now have " + response + " credits.");
-				} else if(cmd.startsWith("!compute")) {
-					response = compute(cmd);
-					userResponseStream.println("Result: " + response);
-				} else if(cmd.startsWith("!list")) {
-					response = list();
-					userResponseStream.println(response);
-				} else if(cmd.startsWith("!logout")) {
-					response = logout();
-					userResponseStream.println(response);
-				} else if(cmd.startsWith("!exit")) {
-					exit();
-				} else if (cmd.startsWith("!authenticate")) {
+				if (cmd.startsWith("!authenticate")) {
 					response = authenticate(splittedCmd[1]);
 					userResponseStream.println(response);
+					if(response.contains("Successfully aut")) {
+						authenticated = true;
+					}
+				} else if(cmd.startsWith("!login") && splittedCmd.length >= 3 && authenticated) {
+					userResponseStream.println(login(splittedCmd[1],splittedCmd[2]));
+				} else if(cmd.startsWith("!credits") && authenticated) {
+					userResponseStream.println(credits());
+				} else if(cmd.startsWith("!buy")  && splittedCmd.length >= 2 && authenticated) {
+					response = buy(Long.parseLong(splittedCmd[1]));
+					userResponseStream.println("You now have " + response + " credits.");
+				} else if(cmd.startsWith("!compute") && authenticated) {
+					response = compute(cmd);
+					userResponseStream.println("Result: " + response);
+				} else if(cmd.startsWith("!list") && authenticated) {
+					response = list();
+					userResponseStream.println(response);
+				} else if(cmd.startsWith("!logout") && authenticated) {
+					response = logout();
+					userResponseStream.println(response);
+				} else if(cmd.startsWith("!exit") && authenticated) {
+					exit();
+				} else if(!authenticated) {
+					userResponseStream.println("User not authenticated!");
 				} else {
 					userResponseStream.println("No valid command.");
 				}
@@ -125,7 +133,7 @@ public class Client implements IClientCli, Runnable {
 			_socket = new Socket(_host, _tcpPort);
 			_reader = new BufferedReader(new InputStreamReader(_socket.getInputStream()));
 			_writer = new PrintWriter(_socket.getOutputStream(), true);
-			authenticate(componentName);
+//			authenticate(componentName);
 
 		} catch (IOException e) {
 			userResponseStream.println("Connection to server couldn't be established! Host: " + _host + " TCP Port: " + _tcpPort);
@@ -140,9 +148,9 @@ public class Client implements IClientCli, Runnable {
 		_writer.println(encryptedMsg64);
 
 		String responseAES64 = _reader.readLine();
-		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
+//		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
 
-		return new String(EncryptionUtils.cryptAES(2, secretKey, iv, responseAES));
+		return new String(EncryptionUtils.cryptAESBytes(2, secretKey, iv, Base64.decode(responseAES64.getBytes())));
 	}
 
 	/**
@@ -155,9 +163,9 @@ public class Client implements IClientCli, Runnable {
 		_writer.println(encryptedMsg64);
 
 		String responseAES64 = _reader.readLine();
-		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
+//		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
 
-		return new String(util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES));
+		return new String(EncryptionUtils.cryptAESBytes(2, secretKey, iv, Base64.decode(responseAES64.getBytes())));
 	}
 
 	@Override
@@ -167,9 +175,9 @@ public class Client implements IClientCli, Runnable {
 		_writer.println(encryptedMsg64);
 
 		String responseAES64 = _reader.readLine();
-		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
+//		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
 
-		return new String(util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES));
+		return new String(EncryptionUtils.cryptAESBytes(2, secretKey, iv, Base64.decode(responseAES64.getBytes())));
 	}
 
 	@Override
@@ -179,9 +187,9 @@ public class Client implements IClientCli, Runnable {
 		_writer.println(encryptedMsg64);
 
 		String responseAES64 = _reader.readLine();
-		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
+//		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
 
-		return new String(util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES));
+		return new String(EncryptionUtils.cryptAESBytes(2, secretKey, iv, Base64.decode(responseAES64.getBytes())));
 	}
 
 	@Override
@@ -191,9 +199,9 @@ public class Client implements IClientCli, Runnable {
 		_writer.println(encryptedMsg64);
 
 		String responseAES64 = _reader.readLine();
-		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
+//		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
 
-		return new String(util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES));
+		return new String(EncryptionUtils.cryptAESBytes(2, secretKey, iv, Base64.decode(responseAES64.getBytes())));
 	}
 
 	@Override
@@ -203,9 +211,9 @@ public class Client implements IClientCli, Runnable {
 		_writer.println(encryptedMsg64);
 
 		String responseAES64 = _reader.readLine();
-		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
+//		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
 
-		return new String(util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES));
+		return new String(EncryptionUtils.cryptAESBytes(2, secretKey, iv, Base64.decode(responseAES64.getBytes())));
 	}
 
 
