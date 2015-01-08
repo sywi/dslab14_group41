@@ -16,6 +16,7 @@ import java.rmi.registry.Registry;
 import java.security.Key;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
@@ -87,8 +88,12 @@ public class AdminConsole implements IAdminConsole, INotificationCallback,
 
 				} else if (cmd.startsWith("!statistics")) {
 					String[] stats = getStatistics();
+					if(stats!=null)
 					for (int i = 0; i < stats.length; i++) {
 						userResponseStream.println(stats[i]);
+					}
+					else{
+						userResponseStream.println("Noch keine Operationen durchgeführt");
 					}
 				} else if (cmd.startsWith("!subscribe")) {
 					subscribe(splittedCmd[1], Integer.valueOf(splittedCmd[2]),
@@ -116,11 +121,16 @@ public class AdminConsole implements IAdminConsole, INotificationCallback,
 	private String[] getStatistics() throws RemoteException {
 		String[] zruck = null;
 		LinkedHashMap<Character, Long> stats = statistics();
-		Set<Character> operatorsKey=stats.keySet();
-		String[] operators = (String[]) operatorsKey.toArray();
-		for (int i = 0; i < operators.length; i++) {
-			zruck[i]=operators[i]+" "+stats.get(operators[i]);
+//		Set<Character> operatorsKey=stats.keySet();
+//		Character[] operators = (Character[]) operatorsKey.toArray();
+		String key;
+		for (Iterator it = stats.keySet().iterator();it.hasNext();) {
+		    key = (String) it.next(); 
+		    System.out.println(key);
 		}
+//		for (int i = 0; i < operators.length; i++) {
+//			zruck[i]=operators[i]+" "+stats.get(operators[i]);
+//		}
 
 		return zruck;
 	}
