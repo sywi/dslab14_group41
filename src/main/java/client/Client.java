@@ -11,6 +11,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.security.Key;
 import java.security.Security;
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -134,14 +135,14 @@ public class Client implements IClientCli, Runnable {
 
 	@Override
 	public String login(String username, String password) throws IOException {
-		String encryptedMsg = EncryptionUtils.cryptAES(1, secretKey, iv, "!login " + username + " " + password);
-		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
+		String encryptedMsg64 = new String(Base64.encode(EncryptionUtils.cryptAES(1, secretKey, iv, "!login " + username + " " + password)));
+//		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
 		_writer.println(encryptedMsg64);
 
 		String responseAES64 = _reader.readLine();
 		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
 
-		return EncryptionUtils.cryptAES(2, secretKey, iv, responseAES);
+		return new String(EncryptionUtils.cryptAES(2, secretKey, iv, responseAES));
 	}
 
 	/**
@@ -149,62 +150,62 @@ public class Client implements IClientCli, Runnable {
 	 */
 	@Override
 	public String logout() throws IOException {
-		String encryptedMsg = util.EncryptionUtils.cryptAES(1, secretKey, iv, "!logout");
-		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
+		String encryptedMsg64 = new String(Base64.encode(util.EncryptionUtils.cryptAES(1, secretKey, iv, "!logout")));
+//		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
 		_writer.println(encryptedMsg64);
 
 		String responseAES64 = _reader.readLine();
 		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
 
-		return util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES);
+		return new String(util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES));
 	}
 
 	@Override
 	public String credits() throws IOException {
-		String encryptedMsg = util.EncryptionUtils.cryptAES(1, secretKey, iv, "!credits");
-		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
+		String encryptedMsg64 = new String(Base64.encode(util.EncryptionUtils.cryptAES(1, secretKey, iv, "!credits")));
+//		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
 		_writer.println(encryptedMsg64);
 
 		String responseAES64 = _reader.readLine();
 		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
 
-		return util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES);
+		return new String(util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES));
 	}
 
 	@Override
 	public String buy(long credits) throws IOException {
-		String encryptedMsg = util.EncryptionUtils.cryptAES(1, secretKey, iv,"!buy " + credits);
-		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
+		String encryptedMsg64 = new String(Base64.encode(util.EncryptionUtils.cryptAES(1, secretKey, iv,"!buy " + credits)));
+//		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
 		_writer.println(encryptedMsg64);
 
 		String responseAES64 = _reader.readLine();
 		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
 
-		return util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES);
+		return new String(util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES));
 	}
 
 	@Override
 	public String list() throws IOException {
-		String encryptedMsg = util.EncryptionUtils.cryptAES(1, secretKey, iv,"!list");
-		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
+		String encryptedMsg64 = new String(Base64.encode(util.EncryptionUtils.cryptAES(1, secretKey, iv,"!list")));
+//		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
 		_writer.println(encryptedMsg64);
 
 		String responseAES64 = _reader.readLine();
 		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
 
-		return util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES);
+		return new String(util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES));
 	}
 
 	@Override
 	public String compute(String term) throws IOException {
-		String encryptedMsg = util.EncryptionUtils.cryptAES(1, secretKey, iv,term);
-		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
+		String encryptedMsg64 = new String(Base64.encode(util.EncryptionUtils.cryptAES(1, secretKey, iv,term)));
+//		String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
 		_writer.println(encryptedMsg64);
 
 		String responseAES64 = _reader.readLine();
 		String responseAES = new String(Base64.decode(responseAES64.getBytes()));
 
-		return util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES);
+		return new String(util.EncryptionUtils.cryptAES(2, secretKey, iv, responseAES));
 	}
 
 
@@ -260,13 +261,14 @@ public class Client implements IClientCli, Runnable {
 			String[] splitted = controllerResponse.split(" ");
 			byte[] returnedClientChallenge = Base64.decode(splitted[1].getBytes());
 			
-			if (returnedClientChallenge == clientChallenge) {
+			if (Arrays.equals(returnedClientChallenge, clientChallenge)) {
 				byte[] secKey = Base64.decode(splitted[3]);
 				secretKey = new SecretKeySpec(secKey, 0, secKey.length, "AES");
 				byte[] ivArr = Base64.decode(splitted[4]);
 				iv = new IvParameterSpec(ivArr);
-				String encryptedMsg = util.EncryptionUtils.cryptAES(1,secretKey, iv, splitted[2]);
-				String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
+				
+				String encryptedMsg64 = new String(Base64.encode(util.EncryptionUtils.cryptAES(1,secretKey, iv, splitted[2])));
+//				String encryptedMsg64 = new String(Base64.encode(encryptedMsg.getBytes()));
 				// send third message: <controller-challenge>
 				_writer.println(encryptedMsg64);
 			} else {

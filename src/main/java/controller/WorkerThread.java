@@ -72,8 +72,8 @@ public class WorkerThread implements Runnable {
 				if (cmdAES64 != null && authenticated) {
 					String cmdAES = new String(Base64.decode(cmdAES64
 							.getBytes()));
-					String cmd = util.EncryptionUtils.cryptAES(2, secretKey,
-							iv, cmdAES);
+					String cmd = new String(util.EncryptionUtils.cryptAES(2, secretKey,
+							iv, cmdAES));
 					String[] splittedCmd = cmd.split(" ");
 
 					if (_user == null && !splittedCmd[0].equals("!login")) {
@@ -86,49 +86,39 @@ public class WorkerThread implements Runnable {
 								_user = login(splittedCmd[1], splittedCmd[2]);
 
 								if (_user != null) {
-									String responseAES = util.EncryptionUtils
+									byte[] responseAES = util.EncryptionUtils
 											.cryptAES(1, secretKey, iv,
 													"Successfully logged in.");
-									String responseAES64 = new String(
-											Base64.encode(responseAES
-													.getBytes()));
+									String responseAES64 = new String(Base64.encode(responseAES));
 									writer.println(responseAES64);
 								} else if (_user == null) {
-									String responseAES = util.EncryptionUtils
+									byte[] responseAES = util.EncryptionUtils
 											.cryptAES(1, secretKey, iv,
 													"Wrong username or password.");
-									String responseAES64 = new String(
-											Base64.encode(responseAES
-													.getBytes()));
+									String responseAES64 = new String(Base64.encode(responseAES));
 									writer.println(responseAES64);
 								}
 							} else {
 								if (_user.isActive()) {
-									String responseAES = util.EncryptionUtils
+									byte[] responseAES = util.EncryptionUtils
 											.cryptAES(1, secretKey, iv,
 													"You are already logged in!");
-									String responseAES64 = new String(
-											Base64.encode(responseAES
-													.getBytes()));
+									String responseAES64 = new String(Base64.encode(responseAES));
 									writer.println(responseAES64);
 								} else {
 									login(splittedCmd[1], splittedCmd[2]);
 
 									if (_user != null) {
-										String responseAES = util.EncryptionUtils
+										byte[] responseAES = util.EncryptionUtils
 												.cryptAES(1, secretKey, iv,
 														"Welcome back :)");
-										String responseAES64 = new String(
-												Base64.encode(responseAES
-														.getBytes()));
+										String responseAES64 = new String(Base64.encode(responseAES));
 										writer.println(responseAES64);
 									} else {
-										String responseAES = util.EncryptionUtils
+										byte[] responseAES = util.EncryptionUtils
 												.cryptAES(1, secretKey, iv,
 														"Wrong username or password.");
-										String responseAES64 = new String(
-												Base64.encode(responseAES
-														.getBytes()));
+										String responseAES64 = new String(Base64.encode(responseAES));
 										writer.println(responseAES64);
 									}
 								}
@@ -137,19 +127,17 @@ public class WorkerThread implements Runnable {
 
 						case "!credits":
 							if (_user.isActive()) {
-								String responseAES = util.EncryptionUtils
+								byte[] responseAES = util.EncryptionUtils
 										.cryptAES(1, secretKey, iv, "You have "
 												+ _user.getCredits()
 												+ " credits left.");
-								String responseAES64 = new String(
-										Base64.encode(responseAES.getBytes()));
+								String responseAES64 = new String(Base64.encode(responseAES));
 								writer.println(responseAES64);
 							} else {
-								String responseAES = util.EncryptionUtils
+								byte[] responseAES = util.EncryptionUtils
 										.cryptAES(1, secretKey, iv,
 												"Only for logged in users.");
-								String responseAES64 = new String(
-										Base64.encode(responseAES.getBytes()));
+								String responseAES64 = new String(Base64.encode(responseAES));
 								writer.println(responseAES64);
 							}
 							break;
@@ -162,30 +150,27 @@ public class WorkerThread implements Runnable {
 							break;
 
 						case "!list":
-							String responseAES = util.EncryptionUtils.cryptAES(
+							byte[] responseAES = util.EncryptionUtils.cryptAES(
 									1, secretKey, iv, list());
-							String responseAES64 = new String(
-									Base64.encode(responseAES.getBytes()));
+							String responseAES64 = new String(Base64.encode(responseAES));
 							writer.println(responseAES64);
 							break;
 
 						case "!compute":
 							if (_user.isActive()) {
-								String response2AES = util.EncryptionUtils
+								byte[] response2AES = util.EncryptionUtils
 										.cryptAES(1, secretKey, iv,
 												compute(cmd));
-								String response2AES64 = new String(
-										Base64.encode(response2AES.getBytes()));
+								String response2AES64 = new String(Base64.encode(response2AES));
 								writer.println(response2AES64);
 							}
 							break;
 
 						case "!logout":
 							_user.logout();
-							String response2AES = util.EncryptionUtils
+							byte[] response2AES = util.EncryptionUtils
 									.cryptAES(1, secretKey, iv, "Goodbye :)");
-							String response2AES64 = new String(
-									Base64.encode(response2AES.getBytes()));
+							String response2AES64 = new String(Base64.encode(response2AES));
 							writer.println(response2AES64);
 							break;
 
@@ -198,12 +183,11 @@ public class WorkerThread implements Runnable {
 							break;
 
 						default:
-							String response3AES = util.EncryptionUtils
+							byte[] response3AES = util.EncryptionUtils
 									.cryptAES(1, secretKey, iv,
 											"No vailid command: "
 													+ splittedCmd[0]);
-							String response3AES64 = new String(
-									Base64.encode(response3AES.getBytes()));
+							String response3AES64 = new String(Base64.encode(response3AES));
 							writer.println(response3AES64);
 						}
 					}
@@ -220,9 +204,9 @@ public class WorkerThread implements Runnable {
 
 		if (cmd.contains("!authenticate")) {
 			String[] splittedCmd = cmd.split(" ");
+;			String userName = splittedCmd[1];
 			String clientChallenge64 = splittedCmd[2];
-			String controllerChallenge64 = new String(
-					Base64.encode(util.EncryptionUtils.createSecureRandom()));
+			String controllerChallenge64 = new String(Base64.encode(util.EncryptionUtils.createSecureRandom()));
 
 			KeyGenerator generator;
 			try {
@@ -235,11 +219,10 @@ public class WorkerThread implements Runnable {
 				byte[] ivBytes = new byte[16];
 				random.nextBytes(ivBytes);
 				iv = new IvParameterSpec(ivBytes);
-				String iv64 = new String(
-						encryptBase64(iv.toString().getBytes()));
+				String iv64 = new String(encryptBase64(iv.getIV()));
 
 				//wieso client??
-				String controllerResponse64 = new String(Base64.encode(EncryptionUtils.encryptRSA("keys/controller/" + _user.getName() + ".pub.pem", "!ok "
+				String controllerResponse64 = new String(Base64.encode(EncryptionUtils.encryptRSA("keys/controller/" + userName + ".pub.pem", "!ok "
 								+ clientChallenge64 + " "
 								+ controllerChallenge64 + " " + secretKey64
 								+ " " + iv64)));
@@ -250,8 +233,8 @@ public class WorkerThread implements Runnable {
 
 				// receive third message: <controller-challenge>
 				String clientResponse64AES64 = reader.readLine();
-				String clientResponse64AES = new String(Base64.encode(clientResponse64AES64.getBytes()));
-				String clientResponse64 = util.EncryptionUtils.cryptAES(2,secretKey, iv, clientResponse64AES);
+				//String clientResponse64AES = new String(Base64.decode(clientResponse64AES64.getBytes()));
+				String clientResponse64 = new String(util.EncryptionUtils.cryptAESBytes(2, secretKey, iv, Base64.decode(clientResponse64AES64.getBytes())));
 
 				if (clientResponse64.equals(controllerChallenge64)) {
 					return "success";

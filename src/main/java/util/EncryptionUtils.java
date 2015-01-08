@@ -29,11 +29,16 @@ public class EncryptionUtils {
 	
 	// DECRYPT_MODE 2
 	// ENCRYPT_MODE 1
-	public static String cryptAES(int mode, SecretKey secretKey, IvParameterSpec iv, String msg){
+	public static byte[] cryptAES(int mode, SecretKey secretKey, IvParameterSpec iv, String msg){
+		return cryptAESBytes(mode, secretKey, iv, msg.getBytes());
+	}
+	
+	public static byte[] cryptAESBytes(int mode, SecretKey secretKey, IvParameterSpec iv, byte[] msg) {
 		Cipher cipher;
 		try {
 			cipher = Cipher.getInstance("AES/CTR/NoPadding");
-			cipher.init(mode, secretKey, iv);
+			cipher.init(2, secretKey, iv);
+			return cipher.doFinal(msg);
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -44,6 +49,12 @@ public class EncryptionUtils {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (InvalidAlgorithmParameterException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalBlockSizeException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (BadPaddingException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
