@@ -15,6 +15,9 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 
+import com.sun.org.apache.xml.internal.security.exceptions.Base64DecodingException;
+import com.sun.org.apache.xml.internal.security.utils.Base64;
+
 public class EncryptionUtils {
 	
 	public static byte[] createSecureRandom(){
@@ -48,12 +51,19 @@ public class EncryptionUtils {
 		return null;
 	}
 	
-	public static String encryptRSA(Key key, String msg){
+	/**
+	 * 
+	 * @param key
+	 * @param msg
+	 * @return byte[] 
+	 */
+	public static byte[] encryptRSA(String keyFile, String msg){
 		Cipher cipher;
 		try {
-			cipher = Cipher.getInstance(key.getAlgorithm());
-			cipher.init(Cipher.ENCRYPT_MODE, key);
-			return cipher.doFinal(msg.getBytes()).toString();
+			//cipher = Cipher.getInstance(key.getAlgorithm());
+			cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+			cipher.init(Cipher.ENCRYPT_MODE, Keys.readPublicPEM(new File(keyFile)));
+			return cipher.doFinal(msg.getBytes());
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -69,18 +79,19 @@ public class EncryptionUtils {
 		} catch (BadPaddingException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 		return null;
 	}
 	
-	public static String decryptRSA(String keyFile, String msg){
+	public static String decryptRSA(String keyFile, byte[] msg){
 		Cipher cipher;
 		try {
-			cipher = Cipher
-					.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
-			cipher.init(Cipher.DECRYPT_MODE, util.Keys.readPrivatePEM(new File(
-					keyFile)));
-			return cipher.doFinal(msg.getBytes()).toString();
+			cipher = Cipher.getInstance("RSA/NONE/OAEPWithSHA256AndMGF1Padding");
+			cipher.init(Cipher.DECRYPT_MODE, Keys.readPrivatePEM(new File(keyFile)));
+			return new String(cipher.doFinal(msg));
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

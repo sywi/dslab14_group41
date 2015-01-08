@@ -240,12 +240,12 @@ public class Client implements IClientCli, Runnable {
 		final byte[] clientChallenge = util.EncryptionUtils.createSecureRandom();
 		String clientChallenge64 = new String(Base64.encode(clientChallenge));
 
-		File pemFile = new File(_controllerKeyPath);
+		//File pemFile = new File(_controllerKeyPath);
 
-		Key key = Keys.readPublicPEM(pemFile);
-		String cipheredMsg = EncryptionUtils.encryptRSA(key, "!authenticate " + username + " " + clientChallenge64);
+		//Key key = Keys.readPublicPEM(pemFile);
+		String cipheredMsg64 = new String(Base64.encode(EncryptionUtils.encryptRSA(_controllerKeyPath, "!authenticate " + username + " " + clientChallenge64)));
 
-		String cipheredMsg64 = new String(Base64.encode(cipheredMsg.getBytes()));
+//		String cipheredMsg64 = new String(Base64.encode(cipheredMsg.getBytes()));
 
 		// send first message: !authenticate <user> <client-challenge>
 		_writer.println(cipheredMsg64);
@@ -253,7 +253,7 @@ public class Client implements IClientCli, Runnable {
 		// receive second message: !ok <client-challenge> <controller-challenge>
 		// <secret-key> <iv-parameter>
 		String encryptedControllerResponse64 = _reader.readLine();
-		String encryptedControllerResponse = new String(Base64.decode(encryptedControllerResponse64.getBytes()));
+		byte[] encryptedControllerResponse = Base64.decode(encryptedControllerResponse64.getBytes());
 		String controllerResponse = util.EncryptionUtils.decryptRSA(_keysDir + "/" + username + ".pem", encryptedControllerResponse);
 
 		if (controllerResponse.contains("!ok")) {

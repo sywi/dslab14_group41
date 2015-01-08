@@ -170,7 +170,7 @@ public class CloudController implements ICloudControllerCli, Runnable {
 			_checkPeriod = Integer.parseInt(prop.getProperty("node.checkPeriod"));
 			_rmax = Integer.parseInt(prop.getProperty("controller.rmax"));
 			_hmacKeyFile = new File(prop.getProperty("hmac.key"));
-			_keyFilePath = prop.getProperty("keys/controller/controller.pem");
+			_keyFilePath = prop.getProperty("key");
 			_keyDir = prop.getProperty("keys.dir");
 		} catch (IOException e) {
 			userResponseStream.println("Couldn't read cloud controller properties. " + e.getMessage());
