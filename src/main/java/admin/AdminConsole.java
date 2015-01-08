@@ -123,14 +123,15 @@ public class AdminConsole implements IAdminConsole, INotificationCallback,
 		LinkedHashMap<Character, Long> stats = statistics();
 //		Set<Character> operatorsKey=stats.keySet();
 //		Character[] operators = (Character[]) operatorsKey.toArray();
-		String key;
+		String[] key = null;
+		int anzahl = 0;
 		for (Iterator it = stats.keySet().iterator();it.hasNext();) {
-		    key = (String) it.next(); 
-		    System.out.println(key);
+		    key[anzahl] = (String) it.next(); 
+		    anzahl++;
 		}
-//		for (int i = 0; i < operators.length; i++) {
-//			zruck[i]=operators[i]+" "+stats.get(operators[i]);
-//		}
+		for (int i = 0; i < anzahl; i++) {
+			zruck[i]=key[i]+" "+stats.get(key[i]);
+		}
 
 		return zruck;
 	}
