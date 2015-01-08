@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.rmi.AlreadyBoundException;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -49,6 +50,7 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 	private NodeAliveCtrl _nodeAliveCtrl;
 	private ConsoleInputCloudCtrl _consoleInput;
 	private File _hmacKeyFile;
+	private Registry registry;
 
 	/**
 	 * @param componentName
@@ -60,7 +62,7 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 	 * @param userResponseStream
 	 *            the output stream to write the console output to
 	 * @throws RemoteException
-	 * @throws AlreadyBoundException 
+	 * @throws AlreadyBoundException
 	 */
 	public CloudController(String componentName, Config config,
 			InputStream userRequestStream, PrintStream userResponseStream)
@@ -72,11 +74,23 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 		// read properties
 		readCtrlProperties();
 		readClientProperties();
-		LocateRegistry.createRegistry(config.getInt("controller.rmi.port"));
-		Registry registry = LocateRegistry.getRegistry();
-		IAdminConsole stub =  (IAdminConsole) UnicastRemoteObject.exportObject(this, 0);
-//		Registry.bind(config.getString("binding.name"), this);
-		registry.rebind(config.getString("binding.name"), stub);
+
+		try {
+			registry = LocateRegistry.createRegistry(config
+					.getInt("controller.rmi.port"));
+		} catch (RemoteException e) {
+			registry = LocateRegistry.getRegistry(config
+					.getInt("controller.rmi.port"));
+		}
+
+		// Registry registry = LocateRegistry.getRegistry();
+		UnicastRemoteObject.exportObject(this, 0);
+		// IAdminConsole stub = (IAdminConsole)
+		// UnicastRemoteObject.exportObject(
+		// this, 0);
+		// Registry.bind(config.getString("binding.name"), this);
+
+		registry.rebind(config.getString("binding.name"), this);
 
 	}
 
@@ -159,6 +173,13 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 
 		userRequestStream.close();
 		userResponseStream.close();
+		try {
+			registry.unbind(config.getString("binding.name"));
+		} catch (NotBoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		UnicastRemoteObject.exportObject(this, 0);
 		_executorService.shutdownNow();
 
 		return null;
@@ -169,9 +190,10 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 	 *            the first argument is the name of the {@link CloudController}
 	 *            component
 	 * @throws RemoteException
-	 * @throws AlreadyBoundException 
+	 * @throws AlreadyBoundException
 	 */
-	public static void main(String[] args) throws RemoteException, AlreadyBoundException {
+	public static void main(String[] args) throws RemoteException,
+			AlreadyBoundException {
 		CloudController cloudController = new CloudController(args[0],
 				new Config("controller"), System.in, System.out);
 
@@ -183,17 +205,21 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 	private void readCtrlProperties() {
 		Properties prop = new Properties();
 		try {
-			InputStream input = new FileInputStream("src/main/resources/controller.properties");
+			InputStream input = new FileInputStream(
+					"src/main/resources/controller.properties");
 			prop.load(input);
 
 			_tcpPort = Integer.parseInt(prop.getProperty("tcp.port"));
 			_udpPort = Integer.parseInt(prop.getProperty("udp.port"));
 			_timeout = Integer.parseInt(prop.getProperty("node.timeout"));
-			_checkPeriod = Integer.parseInt(prop.getProperty("node.checkPeriod"));
+			_checkPeriod = Integer.parseInt(prop
+					.getProperty("node.checkPeriod"));
 			_rmax = Integer.parseInt(prop.getProperty("controller.rmax"));
 			_hmacKeyFile = new File(prop.getProperty("hmac.key"));
 		} catch (IOException e) {
-			userResponseStream.println("Couldn't read cloud controller properties. " + e.getMessage());
+			userResponseStream
+					.println("Couldn't read cloud controller properties. "
+							+ e.getMessage());
 		}
 	}
 
@@ -221,12 +247,14 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 				if (key.contains(".password")) {
 					name = key.replaceAll(".password", "");
 					password = prop.getProperty(name + ".password");
-					credits = Integer.parseInt(prop.getProperty(name + ".credits"));
+					credits = Integer.parseInt(prop.getProperty(name
+							+ ".credits"));
 					_clients.add(new User(name, password, credits));
 				}
 			}
 		} catch (IOException e) {
-			userResponseStream.println("Couldn't read client properties. " + e.getMessage());
+			userResponseStream.println("Couldn't read client properties. "
+					+ e.getMessage());
 		}
 	}
 
@@ -270,7 +298,7 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 		try {
 			return _clientRequestWaiter.getLogs();
 		} catch (IOException e) {
-			
+
 			e.printStackTrace();
 			return null;
 		} catch (ClassNotFoundException e) {
@@ -285,29 +313,30 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 		LinkedHashMap<Character, Long> zruck = new LinkedHashMap<Character, Long>();
 		HashMap<Character, Integer> temp = _clientRequestWaiter.getOperators();
 		while (!temp.isEmpty()) {
-			Set<Character> tempKeys = temp.keySet();;
+			Set<Character> tempKeys = temp.keySet();
+			;
 			Character actKey = ' ';
 			int maxValue = 0;
-			if(tempKeys.contains('+')){
-				actKey='+';
-				maxValue=temp.get('+');
+			if (tempKeys.contains('+')) {
+				actKey = '+';
+				maxValue = temp.get('+');
 			}
-			if(tempKeys.contains('-')){
-				if(temp.get('-')<maxValue){
-					actKey='-';
-					maxValue=temp.get('-');
+			if (tempKeys.contains('-')) {
+				if (temp.get('-') < maxValue) {
+					actKey = '-';
+					maxValue = temp.get('-');
 				}
 			}
-			if(tempKeys.contains('*')){
-				if(temp.get('*')<maxValue){
-					actKey='*';
-					maxValue=temp.get('*');
+			if (tempKeys.contains('*')) {
+				if (temp.get('*') < maxValue) {
+					actKey = '*';
+					maxValue = temp.get('*');
 				}
 			}
-			if(tempKeys.contains('/')){
-				if(temp.get('/')<maxValue){
-					actKey='/';
-					maxValue=temp.get('/');
+			if (tempKeys.contains('/')) {
+				if (temp.get('/') < maxValue) {
+					actKey = '/';
+					maxValue = temp.get('/');
 				}
 			}
 			zruck.put(actKey, temp.get(actKey).longValue());
@@ -331,5 +360,5 @@ public class CloudController implements IAdminConsole, ICloudControllerCli,
 	public File getHmacKeyFile() {
 		return _hmacKeyFile;
 	}
-	
+
 }

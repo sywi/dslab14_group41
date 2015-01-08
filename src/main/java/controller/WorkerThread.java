@@ -38,7 +38,7 @@ public class WorkerThread implements Runnable {
 	protected WorkerThread(Socket socket, CloudController ctrl) {
 		_socket = socket;
 		_ctrl = ctrl;
-		HashMap<Character, Integer> _operators = new HashMap<>();
+		_operators = new HashMap<>();
 	}
 
 	@Override
