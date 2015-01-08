@@ -119,14 +119,14 @@ public class AdminConsole implements IAdminConsole, INotificationCallback,
 	}
 
 	private String[] getStatistics() throws RemoteException {
-		String[] zruck = null;
 		LinkedHashMap<Character, Long> stats = statistics();
+		String[] zruck = new String[stats.keySet().size()];
 //		Set<Character> operatorsKey=stats.keySet();
 //		Character[] operators = (Character[]) operatorsKey.toArray();
-		String[] key = null;
+		Character[] key = new Character[stats.keySet().size()];
 		int anzahl = 0;
 		for (Iterator it = stats.keySet().iterator();it.hasNext();) {
-		    key[anzahl] = (String) it.next(); 
+		    key[anzahl] = (Character) it.next(); 
 		    anzahl++;
 		}
 		for (int i = 0; i < anzahl; i++) {
@@ -172,6 +172,9 @@ public class AdminConsole implements IAdminConsole, INotificationCallback,
 
 	@Override
 	public LinkedHashMap<Character, Long> statistics() throws RemoteException {
+//		LinkedHashMap<Character, Long> test = new LinkedHashMap<Character, Long>();
+//		test.put('+', (long) 5);
+//		test.put('-', (long) 4);
 		return controller.statistics();
 	}
 
