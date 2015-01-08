@@ -14,8 +14,11 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.security.Key;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
@@ -114,27 +117,24 @@ public class AdminConsole implements IAdminConsole, INotificationCallback,
 	}
 
 	private String[] getStatistics() throws RemoteException {
-		String[] zruck = null;
+		List<String> zruck = new ArrayList<>();
 		LinkedHashMap<Character, Long> stats = statistics();
 		Set<Character> operatorsKey=stats.keySet();
 		
-		//Ugly fix starts:
-		String[] operators = new String[operatorsKey.size()];
-		int index = 0;
-		for (Object c : operatorsKey.toArray()) {
-			operators[index++] = ((Character)c).toString();
+		String[] key = new String[operatorsKey.size()];
+		int anzahl = 0;
+		for (Iterator it = stats.keySet().iterator(); it.hasNext(); ) {
+		    key[anzahl++] = ((Character) it.next()).toString();
 		}
-		//Ugly fix ends.
-		
-		for (int i = 0; i < operators.length; i++) {
-			zruck[i]=operators[i]+" "+stats.get(operators[i]);
+		for (int i = 0; i < anzahl; i++) {
+			zruck.add(i, key[i]+" "+stats.get(key[i]));
 		}
 
-		return zruck;
+		return zruck.toArray(new String[0]);
 	}
 
 	private String[] getLogsSort() throws RemoteException {
-		String[] zruck = null;
+		List<String> zruck = new ArrayList<>();
 		int zruckPos = 0;
 		List<ComputationRequestInfo> todo = getLogs();
 		for (int i = 0; i < todo.size(); i++) {
@@ -145,13 +145,13 @@ public class AdminConsole implements IAdminConsole, INotificationCallback,
 			String[] date = (String[]) dateTemp.toArray();
 			for (int j = 0; j < date.length; j++) {
 				String[] splittedDate = date[j].split("_");
-				zruck[zruckPos] = splittedDate[0] + "_" + splittedDate[1]
-						+ " [" + name + "]: " + dateResult.get(date[j]);
+				zruck.add(zruckPos, splittedDate[0] + "_" + splittedDate[1]
+						+ " [" + name + "]: " + dateResult.get(date[j]));
 			}
 		}
-		Arrays.sort(zruck);
+		Collections.sort(zruck);
 
-		return zruck;
+		return zruck.toArray(new String[0]);
 	}
 
 	@Override
